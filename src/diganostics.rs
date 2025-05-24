@@ -43,7 +43,6 @@ fn update_fps(mut text: Single<&mut Text, With<FPSText>>, diagnostics: Res<Diagn
     if let Some(fps) = diagnostics.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS) {
         if let Some(smooth) = fps.smoothed() {
             text.0 = format!("{:.02} FPS", smooth);
-            info!("{}", smooth);
         }
     }
 }

@@ -28,7 +28,7 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 #[derive(Component)]
-struct Player {
+pub struct Player {
     speed: f32,
 }
 

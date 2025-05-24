@@ -4183,6 +4183,7 @@ name = "vox_shader"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "indexmap",
  "noise",
 ]
 
