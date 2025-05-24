@@ -13,6 +13,9 @@ use crate::{diganostics::VoxelCount, player::Player};
 const CHUNK_SIZE: i32 = 16;
 const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
+const GROUND_HIGHT: i32 = 8;
+
+const MAP_SIZE: i32 = 10;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<BlockDescriptor>()
@@ -23,7 +26,7 @@ pub fn plugin(app: &mut App) {
         .add_systems(First, (extract_data, populate_chunks).chain());
 }
 
-#[derive(Component, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
 #[component(immutable, on_insert = ChunkId::on_add)]
 #[require(Transform, Visibility)]
 struct ChunkId(IVec3);
@@ -104,8 +107,8 @@ fn spawn_world(mut commands: Commands) {
         DirectionalLight::default(),
         Transform::from_translation(Vec3::ONE * 100.).looking_at(Vec3::NEG_Y * 100., Vec3::Y),
     ));
-    for z in -10..=10 {
-        for x in -10..=10 {
+    for z in -MAP_SIZE..=MAP_SIZE {
+        for x in -MAP_SIZE..=MAP_SIZE {
             commands.spawn(ChunkId(IVec3::new(x, 0, z)));
         }
     }
@@ -147,34 +150,41 @@ impl BlockDescriptor {
     fn mesh(&self) -> Handle<Mesh> {
         self.mesh.clone()
     }
-
-    // #[allow(dead_code)]
-    // fn min_max_y(&self) {
-    //     let mut min = f64::MAX;
-    //     let mut max = f64::MIN;
-    //     for x in -1000..1000 {
-    //         for z in -1000..1000 {
-    //             let n = self.noise.get([x as f64, z as f64]);
-    //             min = n.min(min);
-    //             max = n.max(max);
-    //         }
-    //     }
-    //     for x in -1000..1000 {
-    //         for z in -1000..1000 {
-    //             let n = self.noise.get([x as f64 + 0.5, z as f64 - 0.5]);
-    //             min = n.min(min);
-    //             max = n.max(max);
-    //         }
-    //     }
-    //     println!("min: {min}\nmax: {max}");
-    // }
 }
 
-#[derive(Clone, Resource)]
+#[derive(Clone, Resource, Deref, DerefMut)]
 struct MapDescriptor(GeneratorData);
 
 struct MapDescriptorInernal {
     noise: Fbm<SuperSimplex>,
+}
+
+impl MapDescriptorInernal {
+    fn get_height(&self, x: i32, z: i32) -> i32 {
+        let h = self.noise.get([x as f64, z as f64]) * GROUND_HIGHT as f64;
+        GROUND_HIGHT + h as i32
+    }
+
+    #[allow(dead_code)]
+    fn min_max_y(&self) {
+        let mut min = f64::MAX;
+        let mut max = f64::MIN;
+        for x in -1000..1000 {
+            for z in -1000..1000 {
+                let n = self.noise.get([x as f64, z as f64]);
+                min = n.min(min);
+                max = n.max(max);
+            }
+        }
+        for x in -1000..1000 {
+            for z in -1000..1000 {
+                let n = self.noise.get([x as f64 + 0.5, z as f64 - 0.5]);
+                min = n.min(min);
+                max = n.max(max);
+            }
+        }
+        println!("min: {min}\nmax: {max}");
+    }
 }
 
 impl FromWorld for MapDescriptor {
@@ -188,9 +198,9 @@ impl FromWorld for MapDescriptor {
 
 impl MapDescriptor {
     fn new(noise: Fbm<SuperSimplex>) -> MapDescriptor {
-        MapDescriptor(GeneratorData::new(RwLock::new(MapDescriptorInernal {
-            noise,
-        })))
+        let mdi = MapDescriptorInernal { noise };
+        mdi.min_max_y();
+        MapDescriptor(GeneratorData::new(RwLock::new(mdi)))
     }
 }
 
@@ -208,11 +218,34 @@ struct ChunkData {
 }
 
 impl ChunkData {
-    async fn generate(id: ChunkId, map_descriptor: MapDescriptor) -> ChunkData {
-        println!("generating chunk: {id}");
+    fn new() -> ChunkData {
         ChunkData {
-            blocks: [BlockType::Grass; CHUNK_VOLUME as usize],
+            blocks: [BlockType::Air; CHUNK_VOLUME as usize],
         }
+    }
+
+    async fn generate(id: ChunkId, map_descriptor: MapDescriptor) -> ChunkData {
+        let mut chunk = ChunkData::new();
+        let map_descriptor = map_descriptor.read().unwrap();
+        for x in 0..CHUNK_SIZE {
+            for z in 0..CHUNK_SIZE {
+                let h = map_descriptor.get_height(x + id.x * CHUNK_SIZE, z + id.z * CHUNK_SIZE);
+                for y in (id.y * CHUNK_SIZE)..(id.y + 1) * CHUNK_SIZE {
+                    if y > h {
+                        break;
+                    }
+                    let block = if y == h {
+                        BlockType::Grass
+                    } else if y + 3 > h {
+                        BlockType::Dirt
+                    } else {
+                        BlockType::Stone
+                    };
+                    chunk.set_block(x, y - id.y * CHUNK_SIZE, z, block);
+                }
+            }
+        }
+        chunk
     }
 
     fn iter_block(&self) -> ChunkIter<'_> {
@@ -227,10 +260,18 @@ impl ChunkData {
         assert!(y < CHUNK_SIZE);
         assert!(z < CHUNK_SIZE);
 
-        self.blocks
-            .get((y * CHUNK_ARIA + z * CHUNK_SIZE + x) as usize)
-            .copied()
-            .unwrap_or(BlockType::Air)
+        self.blocks[(y * CHUNK_ARIA + z * CHUNK_SIZE + x) as usize]
+    }
+
+    fn set_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
+        assert!(x >= 0);
+        assert!(y >= 0);
+        assert!(z >= 0);
+        assert!(x < CHUNK_SIZE);
+        assert!(y < CHUNK_SIZE);
+        assert!(z < CHUNK_SIZE);
+
+        self.blocks[(y * CHUNK_ARIA + z * CHUNK_SIZE + x) as usize] = block;
     }
 }
 
@@ -254,8 +295,6 @@ fn start_generating_chunks(
     if to_gen == 0 {
         return;
     }
-
-    info!("going to start generating {}", to_gen);
     map.to_gen_chunks.sort_by(|c0, _, c1, _| {
         pos.translation
             .distance_squared(c1.to_vec3())
@@ -264,8 +303,7 @@ fn start_generating_chunks(
     });
     for _ in 0..to_gen {
         let (next, target) = map.to_gen_chunks.pop().expect("to load len > 0");
-        info!("starting chunk{next}: {target}");
-        let task = pool.spawn_local(ChunkData::generate(next, map_desctiptor.clone()));
+        let task = pool.spawn(ChunkData::generate(next, map_desctiptor.clone()));
         map.loading_chunks.insert(next, (target, task));
     }
 }
@@ -279,18 +317,13 @@ fn extract_data(mut map: ResMut<MapData>) {
         ..
     } = *map;
     std::mem::swap(old_loading, loading_chunks);
-    if old_loading.len() > 0 && loading_chunks.len() > 0 {
-        println!("loading len: {}", loading_chunks.len());
-    }
     for (id, (entity, task)) in old_loading.drain() {
         if !task.is_finished() {
             loading_chunks.insert(id, (entity, task));
             continue;
         };
-        info!("Chunk{id} is finished loading");
         let data = bevy::tasks::block_on(task);
         loaded_chunks.insert(id, data);
-        info!("data inserted");
         to_populate.insert(entity);
     }
 }
@@ -314,27 +347,26 @@ fn populate_chunks(
             continue;
         };
 
-        info!("Chunk{id}:{entity} is being populated");
         let chunk = loaded_chunks
             .get(id)
             .expect("chunk to load before populate");
 
-        for (x, y, z) in ChunkBlockIter::new() {
-            let block = chunk.get_block(x, y, z);
-            let material = match block {
-                BlockType::Air => continue,
-                BlockType::Grass => block_data.blocks[0].clone(),
-                BlockType::Dirt => block_data.blocks[1].clone(),
-                BlockType::Stone => block_data.blocks[2].clone(),
-            };
-            commands.entity(entity).with_children(|p| {
+        commands.entity(entity).with_children(|p| {
+            for (x, y, z) in ChunkBlockIter::new() {
+                let block = chunk.get_block(x, y, z);
+                let material = match block {
+                    BlockType::Air => continue,
+                    BlockType::Grass => block_data.blocks[0].clone(),
+                    BlockType::Dirt => block_data.blocks[1].clone(),
+                    BlockType::Stone => block_data.blocks[2].clone(),
+                };
                 p.spawn((
                     Transform::from_translation(IVec3::new(x, y, z).as_vec3()),
                     Mesh3d(block_data.mesh()),
                     MeshMaterial3d(material),
                 ));
-            });
-            voxel_count.inc();
-        }
+                voxel_count.inc();
+            }
+        });
     }
 }
