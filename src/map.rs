@@ -9,14 +9,15 @@ use bevy::{
 use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
 
-use crate::{diganostics::VoxelCount, player::Player};
+use crate::{diganostics::VoxelCount, player::Player, shader::CustomMaterial};
 
 const CHUNK_SIZE: i32 = 16;
 const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 45;
+const MAP_SIZE: i32 = 100;
+const TASK_MULT: usize = 10;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<BlockDescriptor>()
@@ -77,7 +78,7 @@ impl<'a> Iterator for ChunkIter<'a> {
     type Item = BlockType;
     fn next(&mut self) -> Option<Self::Item> {
         let (x, y, z) = self.0.next()?;
-        Some(self.1.get_block(x, y, z))
+        Some(self.1.block(x, y, z))
     }
 }
 
@@ -121,7 +122,7 @@ type GeneratorData = std::sync::Arc<RwLock<MapDescriptorInernal>>;
 struct BlockDescriptor {
     blocks: Vec<Handle<StandardMaterial>>,
     mesh: Handle<Mesh>,
-    material: Handle<StandardMaterial>,
+    material: Handle<crate::shader::CustomMaterial>,
 }
 
 impl FromWorld for BlockDescriptor {
@@ -146,8 +147,8 @@ impl FromWorld for BlockDescriptor {
         ];
         let texture = world.resource::<AssetServer>().load("colors.png");
         let material = world
-            .resource_mut::<Assets<StandardMaterial>>()
-            .add(StandardMaterial {
+            .resource_mut::<Assets<CustomMaterial>>()
+            .add(CustomMaterial {
                 base_color_texture: Some(texture),
                 ..Default::default()
             });
@@ -164,7 +165,7 @@ impl BlockDescriptor {
         self.mesh.clone()
     }
 
-    fn material(&self) -> Handle<StandardMaterial> {
+    fn material(&self) -> Handle<CustomMaterial> {
         self.material.clone()
     }
 }
@@ -273,7 +274,8 @@ impl ChunkData {
         ChunkIter(ChunkBlockIter::new(), self)
     }
 
-    fn get_block(&self, x: i32, y: i32, z: i32) -> BlockType {
+    #[inline(always)]
+    fn block(&self, x: i32, y: i32, z: i32) -> BlockType {
         assert!(x >= 0);
         assert!(y >= 0);
         assert!(z >= 0);
@@ -282,6 +284,13 @@ impl ChunkData {
         assert!(z < CHUNK_SIZE);
 
         self.blocks[(y * CHUNK_ARIA + z * CHUNK_SIZE + x) as usize]
+    }
+
+    fn get_block(&self, x: i32, y: i32, z: i32) -> Option<BlockType> {
+        if x < 0 || y < 0 || z < 0 || x >= CHUNK_SIZE || y >= CHUNK_SIZE || z >= CHUNK_SIZE {
+            return None;
+        }
+        Some(self.block(x, y, z))
     }
 
     fn set_block(&mut self, x: i32, y: i32, z: i32, block: BlockType) {
@@ -294,25 +303,55 @@ impl ChunkData {
 
         self.blocks[(y * CHUNK_ARIA + z * CHUNK_SIZE + x) as usize] = block;
     }
+    // Back face
+    const BACK_FACE: [Vertex; 4] = [
+        Vertex::LeftBottomBack,  // left bottom back
+        Vertex::RightBottomBack, // right bottom back
+        Vertex::RightTopBack,    // right top back
+        Vertex::LeftTopBack,     // left top back
+    ];
 
-    const POSITIONS: [[f32; 3]; 8] = [
-        [0., 0., 1.], //left bottom back 0
-        [1., 0., 1.], //right bottom back 1
-        [1., 1., 1.], //right top back 2
-        [0., 1., 1.], //left top back 3
-        [0., 0., 0.], //left bottom frount 4
-        [1., 0., 0.], //right bottom frount 5
-        [1., 1., 0.], //right top frount 6
-        [0., 1., 0.], //left top frount 7
+    // Front face
+    const FRONT_FACE: [Vertex; 4] = [
+        Vertex::LeftBottomFront,  // left bottom front
+        Vertex::LeftTopFront,     // left top front
+        Vertex::RightTopFront,    // right top front
+        Vertex::RightBottomFront, // right bottom front
     ];
-    const INDICES: [u32; 36] = [
-        0, 1, 2, 0, 2, 3, // Back face (0,1,2,3)
-        4, 6, 5, 4, 7, 6, // Front face (4,5,6,7)
-        0, 3, 7, 0, 7, 4, // Left face (0,3,7,4)
-        1, 5, 6, 1, 6, 2, // Right face (1,5,6,2)
-        0, 4, 5, 0, 5, 1, // Bottom face (0,4,5,1)
-        3, 2, 6, 3, 6, 7, // Top face (3,2,6,7)
+
+    // Left face
+    const LEFT_FACE: [Vertex; 4] = [
+        Vertex::LeftBottomBack,  // left bottom back
+        Vertex::LeftTopBack,     // left top back
+        Vertex::LeftTopFront,    // left top front
+        Vertex::LeftBottomFront, // left bottom front
     ];
+
+    // Right face
+    const RIGHT_FACE: [Vertex; 4] = [
+        Vertex::RightBottomBack,  // right bottom back
+        Vertex::RightBottomFront, // right bottom front
+        Vertex::RightTopFront,    // right top front
+        Vertex::RightTopBack,     // right top back
+    ];
+
+    // Bottom face
+    const BOTTOM_FACE: [Vertex; 4] = [
+        Vertex::LeftBottomBack,   // left bottom back
+        Vertex::LeftBottomFront,  // left bottom front
+        Vertex::RightBottomFront, // right bottom front
+        Vertex::RightBottomBack,  // right bottom back
+    ];
+
+    // Top face
+    const TOP_FACE: [Vertex; 4] = [
+        Vertex::LeftTopBack,   // left top back
+        Vertex::RightTopBack,  // right top back
+        Vertex::RightTopFront, // right top front
+        Vertex::LeftTopFront,  // left top front
+    ];
+
+    const INDICES: [u32; 6] = [0, 1, 2, 0, 2, 3];
 
     const NORMALS: [[f32; 3]; 8] = [
         [-0.57735027, -0.57735027, 0.57735027],  // vertex 0
@@ -335,23 +374,42 @@ impl ChunkData {
         let mut indices = Vec::new();
         let mut normals = Vec::new();
         for (x, y, z) in ChunkBlockIter::new() {
-            let block = self.get_block(x, y, z);
+            let block = self.block(x, y, z);
             if block == BlockType::Air {
                 continue;
             }
-            indices.extend_from_slice(&ChunkData::INDICES.map(|i| i + positions.len() as u32));
-            positions.extend_from_slice(
-                &ChunkData::POSITIONS
-                    .map(|[px, py, pz]| [px + x as f32, py + y as f32, pz + z as f32]),
-            );
-            normals.extend_from_slice(&ChunkData::NORMALS);
-            uvs.extend_from_slice(&[block.to_uv(); 8]);
+            let mut m_block = VertexSet::default();
+            if let Some(BlockType::Air) = self.get_block(x, y + 1, z).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::TOP_FACE);
+            };
+            if let Some(BlockType::Air) = self.get_block(x, y - 1, z).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::BOTTOM_FACE);
+            };
+            if let Some(BlockType::Air) = self.get_block(x - 1, y, z).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::LEFT_FACE);
+            };
+            if let Some(BlockType::Air) = self.get_block(x + 1, y, z).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::RIGHT_FACE);
+            };
+            if let Some(BlockType::Air) = self.get_block(x, y, z - 1).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::FRONT_FACE);
+            };
+            if let Some(BlockType::Air) = self.get_block(x, y, z + 1).or(Some(BlockType::Air)) {
+                m_block.add_face(&ChunkData::BACK_FACE);
+            };
+
+            indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
+            uvs.extend_from_slice(&vec![block.to_uv(); m_block.vertexs.len()]);
+            positions.extend(m_block.vertexs.iter().map(|p| {
+                let p = p.to_pos();
+                [p[0] + x as f32, p[1] + y as f32, p[2] + z as f32]
+            }));
+            normals.extend_from_slice(&vec![[0., 1., 0.]; m_block.vertexs.len()]);
         }
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        // mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
         mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
-
         mesh
     }
 
@@ -366,6 +424,74 @@ impl ChunkData {
     }
 }
 
+#[derive(Default, Debug)]
+struct VertexSet {
+    left_bottom_back: Option<u32>,
+    right_bottom_back: Option<u32>,
+    right_top_back: Option<u32>,
+    left_top_back: Option<u32>,
+    left_bottom_front: Option<u32>,
+    right_bottom_front: Option<u32>,
+    right_top_front: Option<u32>,
+    left_top_front: Option<u32>,
+    vertexs: Vec<Vertex>,
+    indices: Vec<u32>,
+}
+
+impl VertexSet {
+    fn add_face(&mut self, face: &[Vertex; 4]) {
+        for i in [0, 1, 2, 0, 2, 3] {
+            let v = face[i];
+            let i = self.index(v);
+            self.indices.push(i);
+        }
+    }
+
+    fn index(&mut self, vertex: Vertex) -> u32 {
+        let update = || {
+            let i = self.vertexs.len();
+            self.vertexs.push(vertex);
+            i as u32
+        };
+        *match vertex {
+            Vertex::LeftBottomBack => self.left_bottom_back.get_or_insert_with(update),
+            Vertex::RightBottomBack => self.right_bottom_back.get_or_insert_with(update),
+            Vertex::RightTopBack => self.right_top_back.get_or_insert_with(update),
+            Vertex::LeftTopBack => self.left_top_back.get_or_insert_with(update),
+            Vertex::LeftBottomFront => self.left_bottom_front.get_or_insert_with(update),
+            Vertex::RightBottomFront => self.right_bottom_front.get_or_insert_with(update),
+            Vertex::RightTopFront => self.right_top_front.get_or_insert_with(update),
+            Vertex::LeftTopFront => self.left_top_front.get_or_insert_with(update),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Vertex {
+    LeftBottomBack,   //[0., 0., 1.],
+    RightBottomBack,  //[1., 0., 1.],
+    RightTopBack,     //[1., 1., 1.],
+    LeftTopBack,      //[0., 1., 1.],
+    LeftBottomFront,  //[0., 0., 0.],
+    RightBottomFront, //[1., 0., 0.],
+    RightTopFront,    //[1., 1., 0.],
+    LeftTopFront,     //[0., 1., 0.],
+}
+
+impl Vertex {
+    fn to_pos(self) -> [f32; 3] {
+        match self {
+            Vertex::LeftBottomBack => [0., 0., 1.],
+            Vertex::RightBottomBack => [1., 0., 1.],
+            Vertex::RightTopBack => [1., 1., 1.],
+            Vertex::LeftTopBack => [0., 1., 1.],
+            Vertex::LeftBottomFront => [0., 0., 0.],
+            Vertex::RightBottomFront => [1., 0., 0.],
+            Vertex::RightTopFront => [1., 1., 0.],
+            Vertex::LeftTopFront => [0., 1., 0.],
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BlockType {
     Air,
@@ -395,7 +521,7 @@ fn start_generating_chunks(
 ) {
     let loading_num = map.generating_chunks.len();
     let pool = bevy::tasks::AsyncComputeTaskPool::get();
-    let max_loading = pool.thread_num() * 4;
+    let max_loading = pool.thread_num() * TASK_MULT;
     let to_gen = map.to_gen_data.len().min(max_loading - loading_num);
     if to_gen != 0 {
         map.to_gen_data.sort_by(|c0, _, c1, _| {
@@ -494,3 +620,9 @@ fn populate_chunks(
             .insert((Mesh3d(mesh), MeshMaterial3d(block_data.material())));
     }
 }
+
+// fn modidy_pipline(
+//     renderGr
+// ) {
+
+// }

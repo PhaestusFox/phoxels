@@ -17,3 +17,6 @@
 
 20FPS
 19 Million Voxels
+
+50FPS
+93 Million Voxels
