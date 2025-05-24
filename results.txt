@@ -1,7 +1,19 @@
-raw
+- raw
 10 FPS
 1.8 Million Voxels
 
-raw
 20 FPS
 1 Million Voxels
+
+- Basic Chunk
+400+ FPS
+1 Million Voxels
+
+55 FPS
+8.5 Million Voxels
+
+6FPS
+23.4 Million Voxels
+
+20FPS
+19 Million Voxels

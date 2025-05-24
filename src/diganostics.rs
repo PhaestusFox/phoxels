@@ -43,6 +43,7 @@ fn update_fps(mut text: Single<&mut Text, With<FPSText>>, diagnostics: Res<Diagn
     if let Some(fps) = diagnostics.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS) {
         if let Some(smooth) = fps.smoothed() {
             text.0 = format!("{:.02} FPS", smooth);
+            println!("{:.02}", smooth);
         }
     }
 }
@@ -57,12 +58,17 @@ impl std::fmt::Display for VoxelCount {
 }
 
 impl VoxelCount {
+    #[allow(dead_code)]
     pub fn inc(&mut self) {
         self.0 += 1;
     }
     #[allow(dead_code)]
     pub fn dec(&mut self) {
         self.0 -= 1;
+    }
+
+    pub fn add(&mut self, by: u32) {
+        self.0 += by;
     }
 }
 
