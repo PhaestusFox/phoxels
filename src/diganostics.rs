@@ -1,0 +1,77 @@
+use bevy::{
+    diagnostic::{Diagnostic, DiagnosticsStore, RegisterDiagnostic},
+    prelude::*,
+};
+
+pub const VOXEL_COUNT: bevy::diagnostic::DiagnosticPath =
+    bevy::diagnostic::DiagnosticPath::const_new("Voxel Count");
+
+pub fn plugin(app: &mut App) {
+    app.add_systems(Startup, spawn_ui)
+        .add_systems(Update, (update_fps, update_voxel_count))
+        .register_diagnostic(Diagnostic::new(VOXEL_COUNT))
+        .init_resource::<VoxelCount>();
+}
+
+#[derive(Debug, Component)]
+struct FPSText;
+
+fn spawn_ui(mut commands: Commands) {
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(10.),
+            left: Val::Px(10.),
+            width: Val::VMax(20.),
+            height: Val::VMax(5.),
+            flex_direction: FlexDirection::Column,
+            ..Default::default()
+        },
+        BorderRadius::all(Val::VMax(5.)),
+        BackgroundColor(Color::linear_rgb(0.6, 0.6, 0.6)),
+        children![
+            (Text::new("NIY"), FPSText),
+            (Text::new("NIY"), VoxelCountText),
+        ],
+    ));
+}
+
+#[derive(Debug, Component)]
+struct VoxelCountText;
+
+fn update_fps(mut text: Single<&mut Text, With<FPSText>>, diagnostics: Res<DiagnosticsStore>) {
+    if let Some(fps) = diagnostics.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS) {
+        if let Some(smooth) = fps.smoothed() {
+            text.0 = format!("{:.02} FPS", smooth);
+            info!("{}", smooth);
+        }
+    }
+}
+
+#[derive(Debug, Resource, Default)]
+pub struct VoxelCount(u32);
+
+impl std::fmt::Display for VoxelCount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} Voxels", self.0))
+    }
+}
+
+impl VoxelCount {
+    pub fn inc(&mut self) {
+        self.0 += 1;
+    }
+    #[allow(dead_code)]
+    pub fn dec(&mut self) {
+        self.0 -= 1;
+    }
+}
+
+fn update_voxel_count(
+    mut text: Single<&mut Text, With<VoxelCountText>>,
+    diagnostics: Res<VoxelCount>,
+) {
+    if diagnostics.is_changed() {
+        text.0 = diagnostics.to_string();
+    }
+}
