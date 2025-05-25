@@ -1,0 +1,1 @@
+textures can be found at https://bdcraft.net/ if you use pre-1.5 there is a single texture atlas 1.5+ you will need to either make your own or adjust the code to make it for you

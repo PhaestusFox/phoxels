@@ -123,10 +123,11 @@ fn spawn_world(mut commands: Commands) {
 type GeneratorData = std::sync::Arc<RwLock<MapDescriptorInernal>>;
 
 #[derive(Resource)]
-struct BlockDescriptor {
+pub struct BlockDescriptor {
     blocks: Vec<Handle<StandardMaterial>>,
     mesh: Handle<Mesh>,
     material: Handle<CustomMaterial>,
+    pub terrain: Handle<Image>,
 }
 
 impl FromWorld for BlockDescriptor {
@@ -149,19 +150,18 @@ impl FromWorld for BlockDescriptor {
                 ..Default::default()
             }),
         ];
-        let texture = world
-            .resource::<AssetServer>()
-            .load("no_share/mc_textures.png");
+        let texture = world.resource::<AssetServer>().load("no_share/terrain.png");
         let material = world
             .resource_mut::<Assets<CustomMaterial>>()
             .add(CustomMaterial {
-                base_color_texture: Some(texture),
+                base_color_texture: Some(texture.clone()),
                 ..Default::default()
             });
         BlockDescriptor {
             blocks,
             mesh,
             material,
+            terrain: texture,
         }
     }
 }
@@ -504,7 +504,7 @@ enum BlockType {
     Stone,
     Cobblestone,
     Dirt,
-    Grass,
+    Grass = 78,
 }
 
 fn start_generating_chunks(

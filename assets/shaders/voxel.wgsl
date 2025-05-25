@@ -80,9 +80,9 @@ fn fragment(
     }
     uvx += axis * texture_step;
 
-    if in.block_type == 4 && world_normal.y > 0.5 {
-        uvx += 11. / 16.;
-        uvy += 4. / 16.;
+    if in.block_type == 78 && world_normal.y > 0.5 { // grass
+        uvx += 1. / 16.;
+        // uvy += 4. / 16.;
     }
 
     // if (world_normal.y) < 0.5 {

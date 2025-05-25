@@ -24,3 +24,14 @@
 -simple shader
 48FPS
 93 Million Voxels
+92% 12gb
+
+-u32 for block
+48FPS
+93 Million Voxels
+86% 11.1gb
+
+-i32 for 3xpos
+48FPS
+93 Million Voxels
+75% 10.0gb

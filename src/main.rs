@@ -1,4 +1,4 @@
-use bevy::{pbr::PbrPlugin, prelude::*};
+use bevy::prelude::*;
 
 mod diganostics;
 mod map;
@@ -26,5 +26,36 @@ fn main() {
     app.add_plugins(simple_shader::VoxelShaderPlugin);
     app.add_plugins((player::plugin, diganostics::plugin));
     app.add_plugins(map::plugin);
+    app.add_systems(Update, warn_no_textures);
     app.run();
+}
+
+fn warn_no_textures(
+    asset_server: Res<AssetServer>,
+    mut commands: Commands,
+    mut done: Local<bool>,
+    texture: Res<map::BlockDescriptor>,
+) {
+    if *done {
+        return;
+    }
+    if let bevy::asset::LoadState::Failed(_) = asset_server.load_state(&texture.terrain) {
+        commands.spawn((
+            Text(
+                r#"
+Failed to load terrain.png;
+you can get one from https://bdcraft.net/
+see credit.txt for details"#
+                    .to_string(),
+            ),
+            TextFont {
+                font_size: 75.,
+                ..Default::default()
+            },
+        ));
+        *done = true;
+    }
+    if asset_server.is_loaded(&texture.terrain) {
+        *done = true;
+    }
 }
