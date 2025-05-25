@@ -410,11 +410,11 @@ impl ChunkData {
                 let x = p[0] + x;
                 let y = p[1] + y;
                 let z = p[2] + z;
-                x | y << 8 | z << 16
+                x | y << 8 | z << 16 | (block as i32) << 24
             }));
         }
         mesh.insert_attribute(BLOCK_POS, positions);
-        mesh.insert_attribute(BLOCK_ID, uvs);
+        // mesh.insert_attribute(BLOCK_ID, uvs);
         mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
         mesh
     }

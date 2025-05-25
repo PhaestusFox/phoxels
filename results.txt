@@ -21,6 +21,8 @@
 50FPS
 93 Million Voxels
 
+-- baseline no game 12% 7.4gb
+
 -simple shader
 48FPS
 93 Million Voxels
@@ -35,3 +37,8 @@
 48FPS
 93 Million Voxels
 75% 10.0gb
+
+-one i32 for block&pos
+48FPS
+93 Million Voxels
+73% 9.3gb

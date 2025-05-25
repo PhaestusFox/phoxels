@@ -1,7 +1,6 @@
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: i32,
-    @location(1) block_type: u32,
 };
 
 struct VertexOutput {
@@ -10,7 +9,7 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
     @location(1) world_normal: vec3<f32>,
-    @location(2) block_type: u32,
+    @location(2) block_type: i32,
 }
 
 struct FragmentOutput {
@@ -126,7 +125,6 @@ fn fragment(
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
-    out.block_type = vertex.block_type;
     let in_world_from_local = mesh_functions::get_world_from_local(vertex.instance_index);
 
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
@@ -135,6 +133,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let x = vertex.position & 255;
     let y = (vertex.position >> 8) & 255;
     let z = (vertex.position >> 16) & 255;
+    out.block_type = (vertex.position >> 24) & 255;
     let pos = vec3(f32(x), f32(y), f32(z));
 
 

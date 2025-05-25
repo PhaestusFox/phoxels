@@ -58,7 +58,7 @@ impl Material for VoxelMaterial {
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         let vertex_layout = layout.0.get_layout(&[
             BLOCK_POS.at_shader_location(0),
-            BLOCK_ID.at_shader_location(1),
+            // BLOCK_ID.at_shader_location(1),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
