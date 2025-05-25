@@ -12,6 +12,9 @@ const ATTRIBUTE_BLEND_COLOR: MeshVertexAttribute =
 pub const BLOCK_ID: MeshVertexAttribute =
     MeshVertexAttribute::new("BlockId", 988540917, VertexFormat::Uint32);
 
+pub const BLOCK_POS: MeshVertexAttribute =
+    MeshVertexAttribute::new("BlockPos", 988540918, VertexFormat::Sint32);
+
 pub struct VoxelShaderPlugin;
 
 impl Plugin for VoxelShaderPlugin {
@@ -54,7 +57,7 @@ impl Material for VoxelMaterial {
         _key: bevy::pbr::MaterialPipelineKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
         let vertex_layout = layout.0.get_layout(&[
-            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            BLOCK_POS.at_shader_location(0),
             BLOCK_ID.at_shader_location(1),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];

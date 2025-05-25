@@ -12,7 +12,7 @@ use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
 use crate::{
     diganostics::VoxelCount,
     player::Player,
-    simple_shader::{BLOCK_ID, VoxelMaterial as CustomMaterial},
+    simple_shader::{BLOCK_ID, BLOCK_POS, VoxelMaterial as CustomMaterial},
 };
 
 const CHUNK_SIZE: i32 = 16;
@@ -20,7 +20,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 1;
+const MAP_SIZE: i32 = 100;
 const TASK_MULT: usize = 10;
 
 pub fn plugin(app: &mut App) {
@@ -407,10 +407,13 @@ impl ChunkData {
             uvs.extend_from_slice(&vec![block as u32; m_block.vertexs.len()]);
             positions.extend(m_block.vertexs.iter().map(|p| {
                 let p = p.to_pos();
-                [p[0] + x as f32, p[1] + y as f32, p[2] + z as f32]
+                let x = p[0] + x;
+                let y = p[1] + y;
+                let z = p[2] + z;
+                x | y << 8 | z << 16
             }));
         }
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        mesh.insert_attribute(BLOCK_POS, positions);
         mesh.insert_attribute(BLOCK_ID, uvs);
         mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
         mesh
@@ -482,16 +485,16 @@ enum Vertex {
 }
 
 impl Vertex {
-    fn to_pos(self) -> [f32; 3] {
+    fn to_pos(self) -> [i32; 3] {
         match self {
-            Vertex::LeftBottomBack => [0., 0., 1.],
-            Vertex::RightBottomBack => [1., 0., 1.],
-            Vertex::RightTopBack => [1., 1., 1.],
-            Vertex::LeftTopBack => [0., 1., 1.],
-            Vertex::LeftBottomFront => [0., 0., 0.],
-            Vertex::RightBottomFront => [1., 0., 0.],
-            Vertex::RightTopFront => [1., 1., 0.],
-            Vertex::LeftTopFront => [0., 1., 0.],
+            Vertex::LeftBottomBack => [0, 0, 1],
+            Vertex::RightBottomBack => [1, 0, 1],
+            Vertex::RightTopBack => [1, 1, 1],
+            Vertex::LeftTopBack => [0, 1, 1],
+            Vertex::LeftBottomFront => [0, 0, 0],
+            Vertex::RightBottomFront => [1, 0, 0],
+            Vertex::RightTopFront => [1, 1, 0],
+            Vertex::LeftTopFront => [0, 1, 0],
         }
     }
 }

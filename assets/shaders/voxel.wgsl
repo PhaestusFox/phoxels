@@ -1,6 +1,6 @@
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
-    @location(0) position: vec3<f32>,
+    @location(0) position: i32,
     @location(1) block_type: u32,
 };
 
@@ -132,10 +132,14 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416 .
     var world_from_local = in_world_from_local;
+    let x = vertex.position & 255;
+    let y = (vertex.position >> 8) & 255;
+    let z = (vertex.position >> 16) & 255;
+    let pos = vec3(f32(x), f32(y), f32(z));
 
 
     /// set pos
-    out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(vertex.position, 1.0));
+    out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(pos, 1.0));
     out.world_position.x = round(out.world_position.x);
     out.world_position.y = round(out.world_position.y);
     out.world_position.z = round(out.world_position.z);
