@@ -4,6 +4,7 @@ use bevy::{
     asset::RenderAssetUsages,
     platform::collections::{HashMap, HashSet},
     prelude::*,
+    render::primitives::Aabb,
     tasks::Task,
 };
 use indexmap::IndexMap;
@@ -34,7 +35,7 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
 #[component(immutable, on_insert = ChunkId::on_add)]
-#[require(Transform, Visibility)]
+#[require(Transform, Visibility, Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.))]
 struct ChunkId(IVec3);
 
 impl std::fmt::Display for ChunkId {
@@ -167,11 +168,11 @@ impl FromWorld for BlockDescriptor {
 }
 
 impl BlockDescriptor {
-    fn mesh(&self) -> Handle<Mesh> {
+    pub fn mesh(&self) -> Handle<Mesh> {
         self.mesh.clone()
     }
 
-    fn material(&self) -> Handle<CustomMaterial> {
+    pub fn material(&self) -> Handle<CustomMaterial> {
         self.material.clone()
     }
 }
