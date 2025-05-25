@@ -9,7 +9,9 @@ use bevy::{
 use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
 
-use crate::{diganostics::VoxelCount, player::Player, shader::CustomMaterial};
+use crate::{
+    diganostics::VoxelCount, player::Player, simple_shader::VoxelMaterial as CustomMaterial,
+};
 
 const CHUNK_SIZE: i32 = 16;
 const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
@@ -122,7 +124,7 @@ type GeneratorData = std::sync::Arc<RwLock<MapDescriptorInernal>>;
 struct BlockDescriptor {
     blocks: Vec<Handle<StandardMaterial>>,
     mesh: Handle<Mesh>,
-    material: Handle<crate::shader::CustomMaterial>,
+    material: Handle<CustomMaterial>,
 }
 
 impl FromWorld for BlockDescriptor {
@@ -372,7 +374,6 @@ impl ChunkData {
         let mut positions = Vec::new();
         let mut uvs = Vec::new();
         let mut indices = Vec::new();
-        let mut normals = Vec::new();
         for (x, y, z) in ChunkBlockIter::new() {
             let block = self.block(x, y, z);
             if block == BlockType::Air {
@@ -404,11 +405,9 @@ impl ChunkData {
                 let p = p.to_pos();
                 [p[0] + x as f32, p[1] + y as f32, p[2] + z as f32]
             }));
-            normals.extend_from_slice(&vec![[0., 1., 0.]; m_block.vertexs.len()]);
         }
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        // mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
         mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
         mesh
     }

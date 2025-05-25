@@ -4,6 +4,7 @@ mod diganostics;
 mod map;
 mod player;
 mod shader;
+mod simple_shader;
 
 fn main() {
     let mut app = App::new();
@@ -20,7 +21,7 @@ fn main() {
     // let world_normal = normalize( cross( dpdy( in.world_position.xyz ), dpdx( in.world_position.xyz ) ) );
     // StandardMaterial
     app.add_plugins(bevy_mod_debugdump::CommandLineArgs);
-    app.add_plugins(shader::MyMaterialPlugin);
+    app.add_plugins(simple_shader::VoxelShaderPlugin);
     app.add_plugins((player::plugin, diganostics::plugin, map::plugin));
     app.run();
 }
