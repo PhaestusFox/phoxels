@@ -9,6 +9,7 @@ noise = "*"
 indexmap = "*"
 bevy_mod_debugdump = "*"
 bitflags = "*"
+bytemuck = "*"
 
 [profile.dev.package."*"]
 opt-level = 3

@@ -10,7 +10,9 @@ use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
 
 use crate::{
-    diganostics::VoxelCount, player::Player, simple_shader::VoxelMaterial as CustomMaterial,
+    diganostics::VoxelCount,
+    player::Player,
+    simple_shader::{BLOCK_ID, VoxelMaterial as CustomMaterial},
 };
 
 const CHUNK_SIZE: i32 = 16;
@@ -18,7 +20,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 100;
+const MAP_SIZE: i32 = 1;
 const TASK_MULT: usize = 10;
 
 pub fn plugin(app: &mut App) {
@@ -147,7 +149,9 @@ impl FromWorld for BlockDescriptor {
                 ..Default::default()
             }),
         ];
-        let texture = world.resource::<AssetServer>().load("colors.png");
+        let texture = world
+            .resource::<AssetServer>()
+            .load("no_share/mc_textures.png");
         let material = world
             .resource_mut::<Assets<CustomMaterial>>()
             .add(CustomMaterial {
@@ -400,14 +404,14 @@ impl ChunkData {
             };
 
             indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
-            uvs.extend_from_slice(&vec![block.to_uv(); m_block.vertexs.len()]);
+            uvs.extend_from_slice(&vec![block as u32; m_block.vertexs.len()]);
             positions.extend(m_block.vertexs.iter().map(|p| {
                 let p = p.to_pos();
                 [p[0] + x as f32, p[1] + y as f32, p[2] + z as f32]
             }));
         }
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        mesh.insert_attribute(BLOCK_ID, uvs);
         mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
         mesh
     }
@@ -494,23 +498,10 @@ impl Vertex {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BlockType {
     Air,
-    Grass,
-    Dirt,
     Stone,
-}
-
-impl BlockType {
-    const fn to_uv(&self) -> [f32; 2] {
-        const STEP: f32 = 1. / 16.;
-        const START: f32 = STEP / 2.;
-        let (x, y) = match self {
-            BlockType::Air => return [0., 0.],
-            BlockType::Grass => (0, 0),
-            BlockType::Dirt => (1, 0),
-            BlockType::Stone => (2, 0),
-        };
-        [x as f32 * STEP + START, y as f32 * STEP + START]
-    }
+    Cobblestone,
+    Dirt,
+    Grass,
 }
 
 fn start_generating_chunks(

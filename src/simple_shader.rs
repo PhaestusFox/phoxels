@@ -9,6 +9,9 @@ use bevy::{
 const ATTRIBUTE_BLEND_COLOR: MeshVertexAttribute =
     MeshVertexAttribute::new("BlendColor", 988540917, VertexFormat::Float32x4);
 
+pub const BLOCK_ID: MeshVertexAttribute =
+    MeshVertexAttribute::new("BlockId", 988540917, VertexFormat::Uint32);
+
 pub struct VoxelShaderPlugin;
 
 impl Plugin for VoxelShaderPlugin {
@@ -36,26 +39,25 @@ impl Material for VoxelMaterial {
         self.alpha_mode
     }
 
-    // fn vertex_shader() -> bevy::render::render_resource::ShaderRef {
-    //     "shaders/voxel.wgsl".into()
-    // }
+    fn vertex_shader() -> bevy::render::render_resource::ShaderRef {
+        "shaders/voxel.wgsl".into()
+    }
 
     // fn prepass_vertex_shader() -> bevy::render::render_resource::ShaderRef {
     //     bevy::render::render_resource::ShaderRef::Default
     // }
 
-    // fn specialize(
-    //     _pipeline: &bevy::pbr::MaterialPipeline<Self>,
-    //     descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
-    //     layout: &bevy::render::mesh::MeshVertexBufferLayoutRef,
-    //     _key: bevy::pbr::MaterialPipelineKey<Self>,
-    // ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
-    //     let vertex_layout = layout.0.get_layout(&[
-    //         Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
-    //         Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
-    //         // ATTRIBUTE_BLEND_COLOR.at_shader_location(1),
-    //     ])?;
-    //     descriptor.vertex.buffers = vec![vertex_layout];
-    //     Ok(())
-    // }
+    fn specialize(
+        _pipeline: &bevy::pbr::MaterialPipeline<Self>,
+        descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
+        layout: &bevy::render::mesh::MeshVertexBufferLayoutRef,
+        _key: bevy::pbr::MaterialPipelineKey<Self>,
+    ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        let vertex_layout = layout.0.get_layout(&[
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            BLOCK_ID.at_shader_location(1),
+        ])?;
+        descriptor.vertex.buffers = vec![vertex_layout];
+        Ok(())
+    }
 }

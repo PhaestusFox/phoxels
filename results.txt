@@ -20,3 +20,7 @@
 
 50FPS
 93 Million Voxels
+
+-simple shader
+48FPS
+93 Million Voxels
