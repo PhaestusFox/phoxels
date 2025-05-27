@@ -23,7 +23,7 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
         Player { speed: 50. },
-        Transform::from_translation(Vec3::new(0., 5000., 5000.)).looking_at(Vec3::ONE, Vec3::Y),
+        Transform::from_translation(Vec3::new(0., 50., 50.)).looking_at(Vec3::ONE, Vec3::Y),
     ));
 }
 

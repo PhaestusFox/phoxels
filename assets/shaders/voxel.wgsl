@@ -1,6 +1,6 @@
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
-    @location(0) position: i32,
+    @location(0) position: u32,
 };
 
 struct VertexOutput {
@@ -9,7 +9,7 @@ struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) world_position: vec4<f32>,
     @location(1) world_normal: vec3<f32>,
-    @location(2) block_type: i32,
+    @location(2) block_type: u32,
 }
 
 struct FragmentOutput {
@@ -53,8 +53,8 @@ fn fragment(
         }
     }
     var color = vec4(0.);
-    let x = (in.block_type - 1) % 16;
-    let y = (in.block_type - 1) / 16;
+    let x = (in.block_type) % 16;
+    let y = (in.block_type) / 16;
     var uvx = f32(x) / 16.;
     var uvy = (1.+f32(y)) / 16.;
 
@@ -79,7 +79,7 @@ fn fragment(
     }
     uvx += axis * texture_step;
 
-    if in.block_type == 78 && world_normal.y > 0.5 { // grass
+    if in.block_type == 77 && world_normal.y > 0.5 { // grass
         uvx += 1. / 16.;
         // uvy += 4. / 16.;
     }
@@ -139,9 +139,6 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     /// set pos
     out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(pos, 1.0));
-    out.world_position.x = round(out.world_position.x);
-    out.world_position.y = round(out.world_position.y);
-    out.world_position.z = round(out.world_position.z);
     out.position = position_world_to_clip(out.world_position.xyz);
     /// end set pos
 

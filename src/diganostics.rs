@@ -8,9 +8,7 @@ pub const VOXEL_COUNT: bevy::diagnostic::DiagnosticPath =
 
 pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_ui)
-        .add_systems(Update, (update_fps, update_voxel_count))
-        .register_diagnostic(Diagnostic::new(VOXEL_COUNT))
-        .init_resource::<VoxelCount>();
+        .add_systems(Update, (update_fps, update_voxel_count));
 }
 
 #[derive(Debug, Component)]
@@ -32,12 +30,16 @@ fn spawn_ui(mut commands: Commands) {
         children![
             (Text::new("NIY"), FPSText),
             (Text::new("NIY"), VoxelCountText),
+            (Text::new("NIY"), VoxelMeshText),
         ],
     ));
 }
 
 #[derive(Debug, Component)]
 struct VoxelCountText;
+
+#[derive(Debug, Component)]
+struct VoxelMeshText;
 
 fn update_fps(mut text: Single<&mut Text, With<FPSText>>, diagnostics: Res<DiagnosticsStore>) {
     if let Some(fps) = diagnostics.get(&bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS) {
@@ -73,10 +75,12 @@ impl VoxelCount {
 }
 
 fn update_voxel_count(
-    mut text: Single<&mut Text, With<VoxelCountText>>,
-    diagnostics: Res<VoxelCount>,
+    mut text_loaded: Single<&mut Text, (With<VoxelCountText>, Without<VoxelMeshText>)>,
+    mut text_mesh: Single<&mut Text, (With<VoxelMeshText>, Without<VoxelCountText>)>,
+    diagnostics: Res<phoxels::prelude::VoxelCount>,
 ) {
     if diagnostics.is_changed() {
-        text.0 = diagnostics.to_string();
+        text_loaded.0 = diagnostics.loaded.to_string();
+        text_mesh.0 = diagnostics.meshed.to_string();
     }
 }

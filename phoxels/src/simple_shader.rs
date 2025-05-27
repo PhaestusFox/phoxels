@@ -6,11 +6,8 @@ use bevy::{
     },
 };
 
-pub const BLOCK_ID: MeshVertexAttribute =
-    MeshVertexAttribute::new("BlockId", 988540917, VertexFormat::Uint32);
-
-pub const BLOCK_POS: MeshVertexAttribute =
-    MeshVertexAttribute::new("BlockPos", 988540918, VertexFormat::Sint32);
+pub const BLOCK_DATA: MeshVertexAttribute =
+    MeshVertexAttribute::new("BlockData", 988540919, VertexFormat::Uint32);
 
 pub struct VoxelShaderPlugin;
 
@@ -53,10 +50,7 @@ impl Material for VoxelMaterial {
         layout: &bevy::render::mesh::MeshVertexBufferLayoutRef,
         _key: bevy::pbr::MaterialPipelineKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
-        let vertex_layout = layout.0.get_layout(&[
-            BLOCK_POS.at_shader_location(0),
-            // BLOCK_ID.at_shader_location(1),
-        ])?;
+        let vertex_layout = layout.0.get_layout(&[BLOCK_DATA.at_shader_location(0)])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }

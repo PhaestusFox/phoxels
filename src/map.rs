@@ -6,15 +6,19 @@ use bevy::{
     prelude::*,
     render::primitives::Aabb,
     tasks::Task,
+    text::cosmic_text::fontdb::Query,
 };
 use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
+use phoxels::core::{BlockMeta, ChunkId};
 
 use crate::{
     diganostics::VoxelCount,
     player::Player,
-    simple_shader::{BLOCK_ID, BLOCK_POS, VoxelMaterial as CustomMaterial},
+    // simple_shader::{BLOCK_ID, BLOCK_POS, VoxelMaterial as CustomMaterial},
 };
+
+use phoxels::prelude::VoxelMaterial as CustomMaterial;
 
 const CHUNK_SIZE: i32 = 16;
 const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
@@ -25,44 +29,102 @@ const MAP_SIZE: i32 = 100;
 const TASK_MULT: usize = 10;
 
 pub fn plugin(app: &mut App) {
-    app.init_resource::<BlockDescriptor>()
-        .init_resource::<MapDescriptor>()
-        .init_resource::<MapData>();
-    app.add_systems(Startup, spawn_world)
-        .add_systems(Last, start_generating_chunks)
-        .add_systems(First, (extract_chunkdata, populate_chunks).chain());
+    app.init_resource::<BlockDescriptor>();
+    // .init_resource::<MapDescriptor>()
+    // .init_resource::<MapData>();
+    app.add_systems(Startup, spawn_world);
+    let map_descriptor = MapDescriptor::from_world(app.world_mut());
+    app.insert_resource(map_descriptor.clone());
+    app.insert_resource(phoxels::prelude::PhoxelGenerator::new(move |id| {
+        let mut chunk = phoxels::prelude::ChunkData::empty();
+        let map_descriptor = map_descriptor.read().unwrap();
+        for x in 0..CHUNK_SIZE as usize {
+            for z in 0..CHUNK_SIZE as usize {
+                let h = map_descriptor
+                    .get_height(x as i32 + id.x * CHUNK_SIZE, z as i32 + id.z * CHUNK_SIZE);
+                for y in (id.y * CHUNK_SIZE)..(id.y + 1) * CHUNK_SIZE {
+                    if y > h {
+                        break;
+                    }
+                    let block = if y == h {
+                        BlockType::Grass
+                    } else if y + 3 > h {
+                        BlockType::Dirt
+                    } else {
+                        BlockType::Stone
+                    };
+                    chunk.set_block(x, (y - id.y * CHUNK_SIZE) as usize, z, block);
+                }
+            }
+        }
+        chunk
+    }));
+    app.add_systems(
+        Update,
+        sort_gen_order.before(phoxels::prelude::ChunkSets::Mesh),
+    );
+    app.add_systems(
+        Update,
+        sort_chunk_order.before(phoxels::prelude::ChunkSets::Mesh),
+    );
+    // .add_systems(Last, start_generating_chunks)
+    // .add_systems(First, (extract_chunkdata, populate_chunks).chain());
 }
 
-#[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
-#[component(immutable, on_insert = ChunkId::on_add)]
-#[require(Transform, Visibility, Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.))]
-struct ChunkId(IVec3);
-
-impl std::fmt::Display for ChunkId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0))
-    }
+fn sort_gen_order(mut chunks: ResMut<phoxels::ChunkMesher>) {
+    chunks.set_priority(|c1, c2| {
+        if c1.abs().length_squared() > c2.abs().length_squared() {
+            std::cmp::Ordering::Greater
+        } else if c1.abs().length_squared() < c2.abs().length_squared() {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    })
 }
 
-impl ChunkId {
-    fn on_add(mut world: bevy::ecs::world::DeferredWorld, ctx: bevy::ecs::component::HookContext) {
-        let id = *world
-            .entity(ctx.entity)
-            .get::<ChunkId>()
-            .expect("onadd of ChunkId");
-        world
-            .entity_mut(ctx.entity)
-            .get_mut::<Transform>()
-            .expect("ChunkId Requires Transform")
-            .translation = id.to_vec3();
-        let mut map = world.resource_mut::<MapData>();
-        map.to_gen_data.insert(id, ctx.entity);
-    }
-
-    fn to_vec3(self) -> Vec3 {
-        self.0.as_vec3() * CHUNK_SIZE as f32
-    }
+fn sort_chunk_order(mut chunks: ResMut<phoxels::ChunkGenerator>) {
+    chunks.set_priority(|c1, c2| {
+        if c1.abs().length_squared() < c2.abs().length_squared() {
+            std::cmp::Ordering::Greater
+        } else if c1.abs().length_squared() > c2.abs().length_squared() {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Equal
+        }
+    })
 }
+
+// #[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
+// #[component(immutable, on_insert = ChunkId::on_add)]
+// #[require(Transform, Visibility, Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.))]
+// struct ChunkId(IVec3);
+
+// impl std::fmt::Display for ChunkId {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         f.write_fmt(format_args!("{}", self.0))
+//     }
+// }
+
+// impl ChunkId {
+//     fn on_add(mut world: bevy::ecs::world::DeferredWorld, ctx: bevy::ecs::component::HookContext) {
+//         let id = *world
+//             .entity(ctx.entity)
+//             .get::<ChunkId>()
+//             .expect("onadd of ChunkId");
+//         world
+//             .entity_mut(ctx.entity)
+//             .get_mut::<Transform>()
+//             .expect("ChunkId Requires Transform")
+//             .translation = id.to_vec3();
+//         let mut map = world.resource_mut::<MapData>();
+//         map.to_gen_data.insert(id, ctx.entity);
+//     }
+
+//     fn to_vec3(self) -> Vec3 {
+//         self.0.as_vec3() * CHUNK_SIZE as f32
+//     }
+// }
 
 struct ChunkBlockIter {
     x: i32,
@@ -108,15 +170,22 @@ impl Iterator for ChunkBlockIter {
     }
 }
 
-fn spawn_world(mut commands: Commands) {
+fn spawn_world(
+    mut commands: Commands,
+    block_data: Res<BlockDescriptor>,
+    asset_server: Res<AssetServer>,
+) {
     // map_descriptor.min_max_y();
     commands.spawn((
         DirectionalLight::default(),
         Transform::from_translation(Vec3::ONE * 100.).looking_at(Vec3::NEG_Y * 100., Vec3::Y),
     ));
+    commands.spawn((Mesh3d(
+        asset_server.add(Cuboid::from_size(Vec3::ONE * 2.).into()),
+    ),));
     for z in -MAP_SIZE..=MAP_SIZE {
         for x in -MAP_SIZE..=MAP_SIZE {
-            commands.spawn(ChunkId(IVec3::new(x, 0, z)));
+            commands.spawn((ChunkId::new(x, 0, z), MeshMaterial3d(block_data.material())));
         }
     }
 }
@@ -371,54 +440,54 @@ impl ChunkData {
         [-0.57735027, 0.57735027, -0.57735027],  // vertex 7
     ];
 
-    async fn make_mesh(self) -> Mesh {
-        let mut mesh = Mesh::new(
-            bevy::render::mesh::PrimitiveTopology::TriangleList,
-            RenderAssetUsages::RENDER_WORLD,
-        );
-        let mut positions = Vec::new();
-        let mut uvs = Vec::new();
-        let mut indices = Vec::new();
-        for (x, y, z) in ChunkBlockIter::new() {
-            let block = self.block(x, y, z);
-            if block == BlockType::Air {
-                continue;
-            }
-            let mut m_block = VertexSet::default();
-            if let Some(BlockType::Air) = self.get_block(x, y + 1, z).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::TOP_FACE);
-            };
-            if let Some(BlockType::Air) = self.get_block(x, y - 1, z).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::BOTTOM_FACE);
-            };
-            if let Some(BlockType::Air) = self.get_block(x - 1, y, z).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::LEFT_FACE);
-            };
-            if let Some(BlockType::Air) = self.get_block(x + 1, y, z).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::RIGHT_FACE);
-            };
-            if let Some(BlockType::Air) = self.get_block(x, y, z - 1).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::FRONT_FACE);
-            };
-            if let Some(BlockType::Air) = self.get_block(x, y, z + 1).or(Some(BlockType::Air)) {
-                m_block.add_face(&ChunkData::BACK_FACE);
-            };
+    // async fn make_mesh(self) -> Mesh {
+    //     let mut mesh = Mesh::new(
+    //         bevy::render::mesh::PrimitiveTopology::TriangleList,
+    //         RenderAssetUsages::RENDER_WORLD,
+    //     );
+    //     let mut positions = Vec::new();
+    //     let mut uvs = Vec::new();
+    //     let mut indices = Vec::new();
+    //     for (x, y, z) in ChunkBlockIter::new() {
+    //         let block = self.block(x, y, z);
+    //         if block == BlockType::Air {
+    //             continue;
+    //         }
+    //         let mut m_block = VertexSet::default();
+    //         if let Some(BlockType::Air) = self.get_block(x, y + 1, z).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::TOP_FACE);
+    //         };
+    //         if let Some(BlockType::Air) = self.get_block(x, y - 1, z).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::BOTTOM_FACE);
+    //         };
+    //         if let Some(BlockType::Air) = self.get_block(x - 1, y, z).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::LEFT_FACE);
+    //         };
+    //         if let Some(BlockType::Air) = self.get_block(x + 1, y, z).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::RIGHT_FACE);
+    //         };
+    //         if let Some(BlockType::Air) = self.get_block(x, y, z - 1).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::FRONT_FACE);
+    //         };
+    //         if let Some(BlockType::Air) = self.get_block(x, y, z + 1).or(Some(BlockType::Air)) {
+    //             m_block.add_face(&ChunkData::BACK_FACE);
+    //         };
 
-            indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
-            uvs.extend_from_slice(&vec![block as u32; m_block.vertexs.len()]);
-            positions.extend(m_block.vertexs.iter().map(|p| {
-                let p = p.to_pos();
-                let x = p[0] + x;
-                let y = p[1] + y;
-                let z = p[2] + z;
-                x | y << 8 | z << 16 | (block as i32) << 24
-            }));
-        }
-        mesh.insert_attribute(BLOCK_POS, positions);
-        // mesh.insert_attribute(BLOCK_ID, uvs);
-        mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
-        mesh
-    }
+    //         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
+    //         uvs.extend_from_slice(&vec![block as u32; m_block.vertexs.len()]);
+    //         positions.extend(m_block.vertexs.iter().map(|p| {
+    //             let p = p.to_pos();
+    //             let x = p[0] + x;
+    //             let y = p[1] + y;
+    //             let z = p[2] + z;
+    //             x | y << 8 | z << 16 | (block as i32) << 24
+    //         }));
+    //     }
+    //     mesh.insert_attribute(BLOCK_POS, positions);
+    //     // mesh.insert_attribute(BLOCK_ID, uvs);
+    //     mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
+    //     mesh
+    // }
 
     fn count(&self) -> u32 {
         let mut r = 0;
@@ -499,6 +568,7 @@ impl Vertex {
         }
     }
 }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BlockType {
     Air,
@@ -508,112 +578,140 @@ enum BlockType {
     Grass = 78,
 }
 
-fn start_generating_chunks(
-    mut map: ResMut<MapData>,
-    pos: Single<&Transform, With<Player>>,
-    map_desctiptor: Res<MapDescriptor>,
-) {
-    let loading_num = map.generating_chunks.len();
-    let pool = bevy::tasks::AsyncComputeTaskPool::get();
-    let max_loading = pool.thread_num() * TASK_MULT;
-    let to_gen = map.to_gen_data.len().min(max_loading - loading_num);
-    if to_gen != 0 {
-        map.to_gen_data.sort_by(|c0, _, c1, _| {
-            pos.translation
-                .distance_squared(c1.to_vec3())
-                .partial_cmp(&pos.translation.distance_squared(c0.to_vec3()))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        for _ in 0..to_gen {
-            let (next, target) = map.to_gen_data.pop().expect("to load len > 0");
-            let task = pool.spawn(ChunkData::generate(next, map_desctiptor.clone()));
-            map.generating_chunks.insert(next, (target, task));
-        }
-    }
-
-    let meshing_num = map.meshing_chunks.len();
-    let to_gen = map.to_gen_mesh.len().min(max_loading - meshing_num);
-    if to_gen != 0 {
-        map.to_gen_mesh.sort_by(|c0, _, c1, _| {
-            pos.translation
-                .distance_squared(c1.to_vec3())
-                .partial_cmp(&pos.translation.distance_squared(c0.to_vec3()))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        for _ in 0..to_gen {
-            let (next, target) = map.to_gen_mesh.pop().expect("to load len > 0");
-            let Some(data) = map.loaded_chunks.get(&next) else {
-                error!("Failed to find data for {next}");
-                continue;
-            };
-            let task = pool.spawn(data.clone().make_mesh());
-            map.meshing_chunks.insert(next, (target, task));
+impl Into<BlockMeta> for BlockType {
+    fn into(self) -> BlockMeta {
+        match self {
+            BlockType::Air => BlockMeta::EMPTY,
+            BlockType::Stone => BlockMeta {
+                texture: 1,
+                is_solid: true,
+                not_transparent: true,
+            },
+            BlockType::Cobblestone => BlockMeta {
+                texture: 16,
+                is_solid: true,
+                not_transparent: true,
+            },
+            BlockType::Dirt => BlockMeta {
+                texture: 2,
+                is_solid: true,
+                not_transparent: true,
+            },
+            BlockType::Grass => BlockMeta {
+                texture: 77,
+                is_solid: true,
+                not_transparent: true,
+            },
         }
     }
 }
 
-fn extract_chunkdata(mut map: ResMut<MapData>, mut mesh_asset: ResMut<Assets<Mesh>>) {
-    let MapData {
-        old_generating: ref mut old_loading,
-        generating_chunks: ref mut loading_chunks,
-        ref mut loaded_chunks,
-        ref mut to_populate,
-        ref mut to_gen_mesh,
-        ref mut old_meshing,
-        ref mut meshing_chunks,
-        ..
-    } = *map;
-    std::mem::swap(old_loading, loading_chunks);
-    for (id, (entity, task)) in old_loading.drain() {
-        if !task.is_finished() {
-            loading_chunks.insert(id, (entity, task));
-            continue;
-        };
-        let data = bevy::tasks::block_on(task);
-        loaded_chunks.insert(id, data);
-        to_gen_mesh.insert(id, entity);
-    }
+// fn start_generating_chunks(
+//     mut map: ResMut<MapData>,
+//     pos: Single<&Transform, With<Player>>,
+//     map_desctiptor: Res<MapDescriptor>,
+// ) {
+//     let loading_num = map.generating_chunks.len();
+//     let pool = bevy::tasks::AsyncComputeTaskPool::get();
+//     let max_loading = pool.thread_num() * TASK_MULT;
+//     let to_gen = map.to_gen_data.len().min(max_loading - loading_num);
+//     if to_gen != 0 {
+//         map.to_gen_data.sort_by(|c0, _, c1, _| {
+//             pos.translation
+//                 .distance_squared(c1.to_vec3())
+//                 .partial_cmp(&pos.translation.distance_squared(c0.to_vec3()))
+//                 .unwrap_or(std::cmp::Ordering::Equal)
+//         });
+//         for _ in 0..to_gen {
+//             let (next, target) = map.to_gen_data.pop().expect("to load len > 0");
+//             let task = pool.spawn(ChunkData::generate(next, map_desctiptor.clone()));
+//             map.generating_chunks.insert(next, (target, task));
+//         }
+//     }
 
-    std::mem::swap(old_meshing, meshing_chunks);
-    for (id, (entity, task)) in old_meshing.drain() {
-        if !task.is_finished() {
-            meshing_chunks.insert(id, (entity, task));
-            continue;
-        };
-        let data = bevy::tasks::block_on(task);
-        to_populate.insert(entity, mesh_asset.add(data));
-    }
-}
+//     let meshing_num = map.meshing_chunks.len();
+//     let to_gen = map.to_gen_mesh.len().min(max_loading - meshing_num);
+//     if to_gen != 0 {
+//         map.to_gen_mesh.sort_by(|c0, _, c1, _| {
+//             pos.translation
+//                 .distance_squared(c1.to_vec3())
+//                 .partial_cmp(&pos.translation.distance_squared(c0.to_vec3()))
+//                 .unwrap_or(std::cmp::Ordering::Equal)
+//         });
+//         for _ in 0..to_gen {
+//             let (next, target) = map.to_gen_mesh.pop().expect("to load len > 0");
+//             let Some(data) = map.loaded_chunks.get(&next) else {
+//                 error!("Failed to find data for {next}");
+//                 continue;
+//             };
+//             let task = pool.spawn(data.clone().make_mesh());
+//             map.meshing_chunks.insert(next, (target, task));
+//         }
+//     }
+// }
 
-fn populate_chunks(
-    mut map: ResMut<MapData>,
-    chunks: Query<&ChunkId>,
-    mut commands: Commands,
-    block_data: Res<BlockDescriptor>,
-    mut voxel_count: ResMut<VoxelCount>,
-) {
-    let MapData {
-        ref mut loaded_chunks,
-        ref mut to_populate,
-        ..
-    } = *map;
+// fn extract_chunkdata(mut map: ResMut<MapData>, mut mesh_asset: ResMut<Assets<Mesh>>) {
+//     let MapData {
+//         old_generating: ref mut old_loading,
+//         generating_chunks: ref mut loading_chunks,
+//         ref mut loaded_chunks,
+//         ref mut to_populate,
+//         ref mut to_gen_mesh,
+//         ref mut old_meshing,
+//         ref mut meshing_chunks,
+//         ..
+//     } = *map;
+//     std::mem::swap(old_loading, loading_chunks);
+//     for (id, (entity, task)) in old_loading.drain() {
+//         if !task.is_finished() {
+//             loading_chunks.insert(id, (entity, task));
+//             continue;
+//         };
+//         let data = bevy::tasks::block_on(task);
+//         loaded_chunks.insert(id, data);
+//         to_gen_mesh.insert(id, entity);
+//     }
 
-    for (entity, mesh) in to_populate.drain() {
-        let Ok(id) = chunks.get(entity) else {
-            error!("Entity{entity} dose not have a ChunkId");
-            continue;
-        };
+//     std::mem::swap(old_meshing, meshing_chunks);
+//     for (id, (entity, task)) in old_meshing.drain() {
+//         if !task.is_finished() {
+//             meshing_chunks.insert(id, (entity, task));
+//             continue;
+//         };
+//         let data = bevy::tasks::block_on(task);
+//         to_populate.insert(entity, mesh_asset.add(data));
+//     }
+// }
 
-        let chunk = loaded_chunks
-            .get(id)
-            .expect("chunk to load before populate");
-        voxel_count.add(chunk.count());
+// fn populate_chunks(
+//     mut map: ResMut<MapData>,
+//     chunks: Query<&ChunkId>,
+//     mut commands: Commands,
+//     block_data: Res<BlockDescriptor>,
+//     mut voxel_count: ResMut<VoxelCount>,
+// ) {
+//     let MapData {
+//         ref mut loaded_chunks,
+//         ref mut to_populate,
+//         ..
+//     } = *map;
 
-        commands
-            .entity(entity)
-            .insert((Mesh3d(mesh), MeshMaterial3d(block_data.material())));
-    }
-}
+//     for (entity, mesh) in to_populate.drain() {
+//         let Ok(id) = chunks.get(entity) else {
+//             error!("Entity{entity} dose not have a ChunkId");
+//             continue;
+//         };
+
+//         let chunk = loaded_chunks
+//             .get(id)
+//             .expect("chunk to load before populate");
+//         voxel_count.add(chunk.count());
+
+//         commands
+//             .entity(entity)
+//             .insert((Mesh3d(mesh), MeshMaterial3d(block_data.material())));
+//     }
+// }
 
 // fn modidy_pipline(
 //     renderGr

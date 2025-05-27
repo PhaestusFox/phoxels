@@ -1,0 +1,13 @@
+[package]
+name = "phoxels"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.16.0", default-features = false}
+indexmap = "*"
+
+[features]
+default = ["log", "diagnostics"]
+log = ["bevy/bevy_log"]
+diagnostics = []
