@@ -3,11 +3,11 @@ use bevy::{
     app::{App, Plugin, Update},
     ecs::schedule::IntoScheduleConfigs,
     prelude::{Component, Deref, DerefMut, IVec3, Transform, Vec3, Visibility},
-    render::mesh::Mesh,
+    render::{mesh::Mesh, primitives::Aabb},
 };
 
-pub use manager::ChunkManager;
-use manager::{ChunkGenerator, ChunkMesher, GeneratorLimits};
+use manager::{ChunkGenerator, ChunkMesher};
+pub use manager::{ChunkManager, GeneratorLimits};
 
 pub(crate) mod manager;
 
@@ -42,6 +42,10 @@ impl ChunkSize {
 
 #[derive(bevy::prelude::Component, Clone)]
 #[component(on_insert = ChunkData::on_insert, on_remove = ChunkData::on_remove)]
+#[require(Aabb = Aabb::from_min_max(
+    Vec3::ZERO,
+    Vec3::ONE * CHUNK_SIZE.size() as f32,
+))]
 pub struct ChunkData {
     blocks: [BlockMeta; CHUNK_SIZE.volume()],
     #[cfg(feature = "diagnostics")]

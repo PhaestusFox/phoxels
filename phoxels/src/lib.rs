@@ -16,6 +16,7 @@ pub mod prelude {
     pub use crate::chunk::ChunkData;
     pub use crate::chunk::ChunkId;
     pub use crate::chunk::ChunkSets;
+    pub use crate::chunk::GeneratorLimits;
     pub use crate::chunk::manager::ChunkManager;
     pub use crate::chunk::manager::PhoxelGenerator;
     #[cfg(feature = "diagnostics")]
@@ -33,6 +34,6 @@ impl Plugin for PhoxelsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((chunk::ChunkPlugin, simple_shader::VoxelShaderPlugin));
         #[cfg(feature = "diagnostics")]
-        app.add_plugins(diagnostics::PhoxelDiafnostics);
+        app.add_plugins(diagnostics::PhoxelDiagnostics);
     }
 }

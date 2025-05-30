@@ -12,9 +12,9 @@ use bevy::{
 
 use crate::core::{ChunkData, ChunkId};
 
-pub struct PhoxelDiafnostics;
+pub struct PhoxelDiagnostics;
 
-impl Plugin for PhoxelDiafnostics {
+impl Plugin for PhoxelDiagnostics {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelCount>()
             .add_systems(Update, update_on_mesh);
