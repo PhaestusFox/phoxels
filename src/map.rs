@@ -25,7 +25,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 100;
+const MAP_SIZE: i32 = 20;
 const TASK_MULT: usize = 10;
 
 pub fn plugin(app: &mut App) {
@@ -200,7 +200,11 @@ fn spawn_world(
         for x in -MAP_SIZE..=MAP_SIZE {
             commands.spawn((
                 ChunkId::new(x, 0, z),
-                MeshMaterial3d(block_data.material()),
+                if x % 2 == 0 {
+                    MeshMaterial3d(block_data.material())
+                } else {
+                    MeshMaterial3d(block_data.material2.clone())
+                },
                 generator.clone(),
             ));
         }
@@ -211,9 +215,9 @@ type GeneratorData = std::sync::Arc<RwLock<MapDescriptorInernal>>;
 
 #[derive(Resource)]
 pub struct BlockDescriptor {
-    blocks: Vec<Handle<StandardMaterial>>,
     mesh: Handle<Mesh>,
     material: Handle<CustomMaterial>,
+    material2: Handle<CustomMaterial>,
     pub terrain: Handle<Image>,
 }
 
@@ -223,31 +227,25 @@ impl FromWorld for BlockDescriptor {
             .resource_mut::<Assets<Mesh>>()
             .add(Cuboid::from_size(Vec3::ONE));
         let mut materials = world.resource_mut::<Assets<StandardMaterial>>();
-        let blocks = vec![
-            materials.add(StandardMaterial {
-                base_color: Color::linear_rgb(0., 0.8, 0.),
-                ..Default::default()
-            }),
-            materials.add(StandardMaterial {
-                base_color: Color::linear_rgb(0.88, 0.57, 0.39),
-                ..Default::default()
-            }),
-            materials.add(StandardMaterial {
-                base_color: Color::linear_rgb(0.4, 0.4, 0.4),
-                ..Default::default()
-            }),
-        ];
         let texture = world.resource::<AssetServer>().load("no_share/terrain.png");
         let material = world
             .resource_mut::<Assets<CustomMaterial>>()
             .add(CustomMaterial {
                 base_color_texture: Some(texture.clone()),
+                atlas_shape: UVec2::new(16, 8),
+                ..Default::default()
+            });
+        let material2 = world
+            .resource_mut::<Assets<CustomMaterial>>()
+            .add(CustomMaterial {
+                base_color_texture: Some(texture.clone()),
+                atlas_shape: UVec2::new(16, 16),
                 ..Default::default()
             });
         BlockDescriptor {
-            blocks,
             mesh,
             material,
+            material2,
             terrain: texture,
         }
     }

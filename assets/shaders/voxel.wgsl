@@ -17,12 +17,11 @@ struct FragmentOutput {
     @location(0) color: vec4<f32>,
 }
 
-const texture_step: f32 = 1./16.;
 
 // we can import items from shader modules in the assets folder with a quoted path
 const COLOR_MULTIPLIER: vec4<f32> = vec4<f32>(1.0, 1.0, 1.0, 0.5);
 
-@group(2) @binding(0) var<uniform> material_color: vec4<f32>;
+@group(2) @binding(0) var<uniform> atlas_size: vec2<u32>;
 @group(2) @binding(1) var material_color_texture: texture_2d<f32>;
 @group(2) @binding(2) var material_color_sampler: sampler;
 
@@ -34,7 +33,6 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     let world_normal = normalize( cross( dpdy( in.world_position.xyz ), dpdx( in.world_position.xyz ) ) );
 
-    // let dp = max(0., dot(world_normal, light));
     var dp = 0.7;
 
     if world_normal.y > 0.2 {
@@ -53,11 +51,13 @@ fn fragment(
             dp -= 0.05;
         }
     }
-    let x = (in.block_type) % 16;
-    let y = (in.block_type) / 16;
-    var uvx = f32(x) / 16.;
-    var uvy = (1.+f32(y)) / 16.;
+    let x = (in.block_type) % atlas_size.x;
+    let y = (in.block_type) / atlas_size.y;
+    var uvx = f32(x) /  f32(atlas_size.x);
+    var uvy = (1.+f32(y)) /  f32(atlas_size.x);
     
+    let texture_step = 1. / vec2<f32>(atlas_size);
+
     var axis: f32;
     if abs(world_normal.y) < 0.5 {
         axis = (in.world_position.y * in.scale.y) % 1;
@@ -67,7 +67,7 @@ fn fragment(
     if axis < 0 {
         axis += 1;
     }
-    uvy -= (axis * texture_step);
+    uvy -= (axis * texture_step.y);
     
     if abs(world_normal.x) < 0.5 {
         axis = (in.world_position.x * in.scale.x) % 1;
@@ -77,43 +77,23 @@ fn fragment(
     if axis < 0 {
         axis += 1;
     }
-    uvx += axis * texture_step;
+    uvx += axis * texture_step.x;
     
     if in.block_type == 77 && world_normal.y > 0.5 { // grass
-        uvx += 1. / 16.;
-        // uvy += 4. / 16.;
+        uvx += 1. / f32(atlas_size.x);
     }
     
-    // var color = vec4(abs(world_normal), 1.0);
-    // if world_normal.x < -0.1 { color.x = 0.1; } else {color.x = 1; };
-    // if (world_normal.y) < 0.5 {
-    //     var prog_y = in.world_position.y % 1;
-    //     if prog_y < 0 {
-    //         prog_y += 1.;
-    //     }
-    //     uvy -= (prog_y * texture_step);
-    //     var axis: f32;
-    //     if abs(world_normal.x) > 0.1 {
-    //         axis = in.world_position.z % 1;
-    //     } else {
-    //         axis = in.world_position.x % 1;
-    //     }
-    //     if axis < 0 {
-    //         axis += 1.;
-    //     }
-    //     uvx += axis * texture_step;
-    //     color.x = uvx;
-    //     color.y = uvy;
-    // }
+    
+    var ts = textureSample(material_color_texture, material_color_sampler, vec2(uvx, uvy));
+    let a = ts.a;
+    ts *= dp * COLOR_MULTIPLIER;
+    if a < 0.2 {
+        discard;
+    } else {
+        ts.a = a;
+    }
 
-    // if in.uv.x != 0. {
-    //     color.z = 1;
-    // }
-
-
-    // return color;
-
-    return material_color * textureSample(material_color_texture, material_color_sampler, vec2(uvx, uvy)) * COLOR_MULTIPLIER * dp;
+    return ts;
 }
 
 #import bevy_pbr::{

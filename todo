@@ -2,7 +2,7 @@
 - [x] swap ChunkId to Entity as unique identifier
 - [x] detect on_insert PhoxelGenerator to add generate marker
 - [x] add component to indicate a chunk should generate
-- [] add atlas shape to shader
+- [x] add atlas shape to shader
 - [] add per-block face overrides
 - [] add basic greedy meshing
 - [] add collider generatior

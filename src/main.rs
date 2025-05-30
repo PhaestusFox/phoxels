@@ -12,7 +12,7 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    // present_mode: bevy::window::PresentMode::AutoNoVsync,
+                    present_mode: bevy::window::PresentMode::AutoNoVsync,
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -21,8 +21,8 @@ fn main() {
         bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
     ));
     app.insert_resource(phoxels::prelude::GeneratorLimits {
-        max_generating_chunks: 40,
-        max_meshing_chunks: 40,
+        max_generating_chunks: 100,
+        max_meshing_chunks: 100,
     });
     app.add_plugins(phoxels::PhoxelsPlugin);
     // StandardMaterial

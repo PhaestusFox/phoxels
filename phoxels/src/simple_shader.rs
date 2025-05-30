@@ -17,10 +17,10 @@ impl Plugin for VoxelShaderPlugin {
     }
 }
 
-#[derive(Default, Asset, TypePath, AsBindGroup, Debug, Clone)]
+#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct VoxelMaterial {
     #[uniform(0)]
-    pub color: LinearRgba,
+    pub atlas_shape: UVec2,
     #[texture(1)]
     #[sampler(2)]
     pub base_color_texture: Option<Handle<Image>>,
