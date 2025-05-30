@@ -81,11 +81,7 @@ impl PhoxelGenerator {
         mut world: bevy::ecs::world::DeferredWorld,
         ctx: bevy::ecs::component::HookContext,
     ) {
-        #[cfg(feature = "log")]
-        bevy::log::trace!("added {:?} to `ChunkGenerator` que", ctx.entity);
-        world
-            .resource_mut::<ChunkGenerator>()
-            .add_to_queue(ctx.entity);
+        world.commands().entity(ctx.entity).insert(PhoxelGenerate);
     }
 }
 
@@ -231,5 +227,22 @@ pub(super) fn extract_finished_chunk_mesh(
         commands
             .entity(entity)
             .insert(Mesh3d(mesh_assets.add(data)));
+    }
+}
+
+#[derive(Component)]
+#[component(on_insert = PhoxelGenerate::on_insert)]
+pub struct PhoxelGenerate;
+
+impl PhoxelGenerate {
+    fn on_insert(
+        mut world: bevy::ecs::world::DeferredWorld,
+        ctx: bevy::ecs::component::HookContext,
+    ) {
+        #[cfg(feature = "log")]
+        bevy::log::trace!("added {:?} to `ChunkGenerator` que", ctx.entity);
+        world
+            .resource_mut::<ChunkGenerator>()
+            .add_to_queue(ctx.entity);
     }
 }

@@ -1,7 +1,7 @@
 - [x] work out how to scale chunks
 - [x] swap ChunkId to Entity as unique identifier
-- [x] use on_add PhoxelGenerator to start generating chunks
-- [] add component to indicate a chunk should use default PhoxelGenerator
+- [x] detect on_insert PhoxelGenerator to add generate marker
+- [x] add component to indicate a chunk should generate
 - [] add atlas shape to shader
 - [] add per-block face overrides
 - [] add basic greedy meshing
