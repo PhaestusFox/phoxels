@@ -20,6 +20,7 @@ pub mod prelude {
     #[cfg(feature = "diagnostics")]
     pub use crate::diagnostics::VoxelCount;
     pub use crate::simple_shader::VoxelMaterial;
+    pub use crate::simple_shader::{BlockOverride, BlockOverrides};
 }
 
 pub mod utils;

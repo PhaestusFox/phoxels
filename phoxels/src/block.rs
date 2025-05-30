@@ -32,7 +32,7 @@ impl<T: Block> From<T> for BlockMeta {
         BlockMeta {
             texture: block.texture(),
             is_solid: block.is_solid(),
-            not_transparent: block.is_transparent(),
+            not_transparent: !block.is_transparent(),
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::num::NonZeroU8;
+
 use bevy::{
     prelude::*,
     render::{
@@ -5,6 +7,8 @@ use bevy::{
         render_resource::AsBindGroup,
     },
 };
+
+use crate::core::Block;
 
 pub const BLOCK_DATA: MeshVertexAttribute =
     MeshVertexAttribute::new("BlockData", 988540919, VertexFormat::Uint32);
@@ -25,6 +29,158 @@ pub struct VoxelMaterial {
     #[sampler(2)]
     pub base_color_texture: Option<Handle<Image>>,
     pub alpha_mode: AlphaMode,
+    #[uniform(3)]
+    pub overrides: [BlockOverrides; 256 / 4],
+}
+
+impl Default for VoxelMaterial {
+    fn default() -> Self {
+        Self {
+            atlas_shape: UVec2::new(16, 16),
+            base_color_texture: None,
+            alpha_mode: AlphaMode::Opaque,
+            overrides: [BlockOverrides::default(); 256 / 4],
+        }
+    }
+}
+
+impl VoxelMaterial {
+    pub fn set_override(&mut self, block: impl Block, override_data: BlockOverride) {
+        let index = (block.texture() / 4) as usize;
+        let offset = (block.texture() % 4) as u32;
+
+        debug_assert!(
+            index < self.overrides.len(),
+            "Block override index out of bounds: {}",
+            index
+        );
+
+        let mut data = 0;
+
+        if let Some(stride) = override_data.back {
+            debug_assert!(
+                stride.get() < 32,
+                "Back override value out of bounds: {}",
+                stride.get()
+            );
+            data |= stride.get() as u32; // Store the stride value
+        }
+        data <<= 5;
+        if let Some(stride) = override_data.left {
+            debug_assert!(
+                stride.get() < 32,
+                "Left override value out of bounds: {}",
+                stride.get()
+            );
+            data |= stride.get() as u32; // Store the stride value
+        }
+        data <<= 5;
+        if let Some(stride) = override_data.right {
+            debug_assert!(
+                stride.get() < 32,
+                "Left override value out of bounds: {}",
+                stride.get()
+            );
+            data |= stride.get() as u32; // Store the stride value
+        }
+        data <<= 5;
+        if let Some(stride) = override_data.top {
+            debug_assert!(
+                stride.get() < 32,
+                "Left override value out of bounds: {}",
+                stride.get()
+            );
+            data |= stride.get() as u32; // Store the stride value
+        }
+        data <<= 5;
+        if let Some(stride) = override_data.bottom {
+            debug_assert!(
+                stride.get() < 32,
+                "Left override value out of bounds: {}",
+                stride.get()
+            );
+            data |= stride.get() as u32; // Store the stride value
+        }
+
+        let overrides = &mut self.overrides[index];
+        match offset {
+            0 => overrides.block_a = data,
+            1 => overrides.block_b = data,
+            2 => overrides.block_c = data,
+            3 => overrides.block_d = data,
+            _ => unreachable!("Offset must be between 0 and 3, got: {}", offset),
+        };
+    }
+}
+
+#[derive(Default)]
+pub struct BlockOverride {
+    back: Option<NonZeroU8>,
+    left: Option<NonZeroU8>,
+    right: Option<NonZeroU8>,
+    top: Option<NonZeroU8>,
+    bottom: Option<NonZeroU8>,
+}
+
+impl BlockOverride {
+    pub fn back(mut self, stride: u8) -> Self {
+        if stride == 0 {
+            self.top = None;
+        } else {
+            debug_assert!(stride < 32, "Stride must be less than 32");
+            // SAFETY: We ensure that stride is non-zero and within bounds
+            self.back = unsafe { Some(NonZeroU8::new_unchecked(stride)) };
+        }
+        self
+    }
+    pub fn left(mut self, stride: u8) -> Self {
+        if stride == 0 {
+            self.top = None;
+        } else {
+            debug_assert!(stride < 32, "Stride must be less than 32");
+            // SAFETY: We ensure that stride is non-zero and within bounds
+            self.left = unsafe { Some(NonZeroU8::new_unchecked(stride)) };
+        }
+        self
+    }
+    pub fn right(mut self, stride: u8) -> Self {
+        if stride == 0 {
+            self.top = None;
+        } else {
+            debug_assert!(stride < 32, "Stride must be less than 32");
+            // SAFETY: We ensure that stride is non-zero and within bounds
+            self.right = unsafe { Some(NonZeroU8::new_unchecked(stride)) };
+        }
+        self
+    }
+    pub fn top(mut self, stride: u8) -> Self {
+        if stride == 0 {
+            self.top = None;
+        } else {
+            debug_assert!(stride < 32, "Stride must be less than 32");
+            // SAFETY: We ensure that stride is non-zero and within bounds
+            self.top = unsafe { Some(NonZeroU8::new_unchecked(stride)) };
+        }
+        self
+    }
+    pub fn bottom(mut self, stride: u8) -> Self {
+        if stride == 0 {
+            self.top = None;
+        } else {
+            debug_assert!(stride < 32, "Stride must be less than 32");
+            // SAFETY: We ensure that stride is non-zero and within bounds
+            self.bottom = unsafe { Some(NonZeroU8::new_unchecked(stride)) };
+        }
+        self
+    }
+}
+
+#[derive(Default, Clone, Copy, Debug, bevy::render::render_resource::ShaderType)]
+pub struct BlockOverrides {
+    block_a: u32,
+    block_b: u32,
+    block_c: u32,
+    block_d: u32,
 }
 
 impl Material for VoxelMaterial {

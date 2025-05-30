@@ -24,6 +24,16 @@ const COLOR_MULTIPLIER: vec4<f32> = vec4<f32>(1.0, 1.0, 1.0, 0.5);
 @group(2) @binding(0) var<uniform> atlas_size: vec2<u32>;
 @group(2) @binding(1) var material_color_texture: texture_2d<f32>;
 @group(2) @binding(2) var material_color_sampler: sampler;
+// the wgsl equivalent of a hashmap
+@group(2) @binding(3) var<uniform> face_overrides: array<FaceOverride, 256 / 4>;
+// @group(2) @binding(3) var<uniform> mesh_world_from_local: array<>;
+
+struct FaceOverride {
+    block_a: u32,
+    block_b: u32,
+    block_c: u32,
+    block_d: u32,
+}
 
 const light: vec3<f32> = vec3(-0.57735027, 0.57735027, 0.57735027);
 
@@ -32,7 +42,7 @@ fn fragment(
     in: VertexOutput,
 ) -> @location(0) vec4<f32> {
     let world_normal = normalize( cross( dpdy( in.world_position.xyz ), dpdx( in.world_position.xyz ) ) );
-
+    
     var dp = 0.7;
 
     if world_normal.y > 0.2 {
@@ -51,13 +61,48 @@ fn fragment(
             dp -= 0.05;
         }
     }
-    let x = (in.block_type) % atlas_size.x;
-    let y = (in.block_type) / atlas_size.y;
+
+    // back, left, right, top, bottom
+    var face: u32 = 10;
+    if world_normal.x > 0.5 {
+        face = 15;
+    } else if world_normal.x < -0.5 {
+        face = 10;
+    } else if world_normal.y > 0.5 {
+        face = 5;
+    } else if world_normal.y < -0.5 {
+        face = 0;
+    } else if world_normal.z > 0.5 {
+        face = 20;
+    } else if world_normal.z < -0.5 {
+        face = 25;
+    };
+
+    let faceovers = face_overrides[in.block_type / 4];
+    var faceover: u32;
+    let index = in.block_type % 4;
+    if index == 0 {
+        faceover = faceovers.block_a;
+    } else if index == 1 {
+        faceover = faceovers.block_b;
+    } else if index == 2 {
+        faceover = faceovers.block_c;
+    } else if index == 3 {
+        faceover = faceovers.block_d;
+    } else {
+        faceover = 0;
+    }
+    var stride = (faceover >> face) & 31;
+    var block_type = in.block_type + stride;
+
+    let x = (block_type) % atlas_size.x;
+    let y = (block_type) / atlas_size.y;
     var uvx = f32(x) /  f32(atlas_size.x);
     var uvy = (1.+f32(y)) /  f32(atlas_size.x);
     
     let texture_step = 1. / vec2<f32>(atlas_size);
 
+    
     var axis: f32;
     if abs(world_normal.y) < 0.5 {
         axis = (in.world_position.y * in.scale.y) % 1;
@@ -77,13 +122,13 @@ fn fragment(
     if axis < 0 {
         axis += 1;
     }
+    
+    // if in.block_type == 77 && world_normal.y > 0.5 { // grass
+    //     uvx += 1. / f32(atlas_size.x);
+    // }
+    
+    
     uvx += axis * texture_step.x;
-    
-    if in.block_type == 77 && world_normal.y > 0.5 { // grass
-        uvx += 1. / f32(atlas_size.x);
-    }
-    
-    
     var ts = textureSample(material_color_texture, material_color_sampler, vec2(uvx, uvy));
     let a = ts.a;
     ts *= dp * COLOR_MULTIPLIER;
@@ -92,7 +137,8 @@ fn fragment(
     } else {
         ts.a = a;
     }
-
+    
+    // return vec4(color, 1.);
     return ts;
 }
 

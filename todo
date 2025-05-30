@@ -3,7 +3,7 @@
 - [x] detect on_insert PhoxelGenerator to add generate marker
 - [x] add component to indicate a chunk should generate
 - [x] add atlas shape to shader
-- [] add per-block face overrides
+- [x] add per-block face overrides
 - [] add basic greedy meshing
 - [] add collider generatior
 - [] allow dynamic chunk size
