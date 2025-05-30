@@ -10,6 +10,12 @@ impl<const CHUNK_SIZE: usize> BlockIter<CHUNK_SIZE> {
     }
 }
 
+impl<const CHUNK_SIZE: usize> Default for BlockIter<CHUNK_SIZE> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<const CHUNK_SIZE: usize> Iterator for BlockIter<CHUNK_SIZE> {
     type Item = (usize, usize, usize);
     fn next(&mut self) -> Option<Self::Item> {

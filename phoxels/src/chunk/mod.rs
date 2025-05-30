@@ -6,8 +6,8 @@ use bevy::{
     render::{mesh::Mesh, primitives::Aabb},
 };
 
+pub use manager::GeneratorLimits;
 use manager::{ChunkGenerator, ChunkMesher};
-pub use manager::{ChunkManager, GeneratorLimits};
 
 pub(crate) mod manager;
 
@@ -126,11 +126,6 @@ impl ChunkData {
         mut world: bevy::ecs::world::DeferredWorld,
         ctx: bevy::ecs::component::HookContext,
     ) {
-        let Some(id) = world.entity(ctx.entity).get::<ChunkId>().cloned() else {
-            #[cfg(feature = "log")]
-            bevy::log::warn!("ChunkData has no ChunkId, cannot add to meshing queue");
-            return;
-        };
         #[cfg(feature = "diagnostics")]
         {
             let mut chunk_data = world.entity_mut(ctx.entity);
@@ -142,7 +137,9 @@ impl ChunkData {
             let mut diagnostics = world.resource_mut::<crate::diagnostics::VoxelCount>();
             diagnostics.loaded += c as usize;
         }
-        world.resource_mut::<ChunkMesher>().add_to_queue(id);
+        #[cfg(feature = "log")]
+        bevy::log::trace!("Chunk({:?}) added to meshing que", ctx.entity);
+        world.resource_mut::<ChunkMesher>().add_to_queue(ctx.entity);
     }
 
     fn on_remove(
@@ -179,54 +176,52 @@ impl ChunkData {
 }
 
 mod mesh_gen;
-mod utils;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut)]
-#[component(immutable, on_insert = ChunkId::on_insert)]
-#[require(Transform, Visibility)]
-//Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.)
-pub struct ChunkId(IVec3);
+// #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut)]
+// #[component(immutable, on_insert = ChunkId::on_insert)]
+// #[require(Transform, Visibility)]
+// //Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.)
+// pub struct ChunkId(IVec3);
 
-impl ChunkId {
-    pub fn new(x: i32, y: i32, z: i32) -> Self {
-        ChunkId(IVec3::new(x, y, z))
-    }
+// impl ChunkId {
+//     pub fn new(x: i32, y: i32, z: i32) -> Self {
+//         ChunkId(IVec3::new(x, y, z))
+//     }
 
-    pub fn origin(&self) -> Vec3 {
-        (self.0 * CHUNK_SIZE.size() as i32).as_vec3()
-    }
+//     pub fn origin(&self) -> Vec3 {
+//         (self.0 * CHUNK_SIZE.size() as i32).as_vec3()
+//     }
 
-    fn on_insert(
-        mut world: bevy::ecs::world::DeferredWorld,
-        ctx: bevy::ecs::component::HookContext,
-    ) {
-        let id = *world
-            .entity(ctx.entity)
-            .get::<ChunkId>()
-            .expect("onadd of ChunkId");
-        world
-            .entity_mut(ctx.entity)
-            .get_mut::<Transform>()
-            .expect("ChunkId Requires Transform")
-            .translation = id.origin();
-        world
-            .resource_mut::<ChunkManager>()
-            .add_chunk(id, ctx.entity);
+//     fn on_insert(
+//         mut world: bevy::ecs::world::DeferredWorld,
+//         ctx: bevy::ecs::component::HookContext,
+//     ) {
+//         let id = *world
+//             .entity(ctx.entity)
+//             .get::<ChunkId>()
+//             .expect("onadd of ChunkId");
+//         world
+//             .entity_mut(ctx.entity)
+//             .get_mut::<Transform>()
+//             .expect("ChunkId Requires Transform")
+//             .translation = id.origin();
+//         world
+//             .resource_mut::<ChunkManager>()
+//             .add_chunk(id, ctx.entity);
 
-        if world.entity(ctx.entity).get::<ChunkData>().is_some() {
-            world.resource_mut::<ChunkMesher>().add_to_queue(id);
-        } else {
-            world.resource_mut::<ChunkGenerator>().add_to_queue(id);
-        }
-    }
-}
+//         if world.entity(ctx.entity).get::<ChunkData>().is_some() {
+//             world.resource_mut::<ChunkMesher>().add_to_queue(id);
+//         } else {
+//             world.resource_mut::<ChunkGenerator>().add_to_queue(id);
+//         }
+//     }
+// }
 
 pub struct ChunkPlugin;
 
 impl Plugin for ChunkPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ChunkManager>()
-            .init_resource::<ChunkGenerator>()
+        app.init_resource::<ChunkGenerator>()
             .init_resource::<ChunkMesher>()
             .init_resource::<GeneratorLimits>();
 

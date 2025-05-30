@@ -1,8 +1,8 @@
 use bevy::{asset::RenderAssetUsages, render::mesh::Mesh};
 
+use super::ChunkData;
 use crate::core::BlockMeta;
-
-use super::{ChunkData, utils::BlockIter};
+use crate::utils::BlockIter;
 
 // Back face
 const BACK_FACE: [Vertex; 4] = [

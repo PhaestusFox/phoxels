@@ -10,7 +10,7 @@ use bevy::{
     render::mesh::Mesh3d,
 };
 
-use crate::core::{ChunkData, ChunkId};
+use crate::core::ChunkData;
 
 pub struct PhoxelDiagnostics;
 
@@ -30,7 +30,7 @@ pub struct VoxelCount {
 fn update_on_mesh(
     mut diagnostics: ResMut<VoxelCount>,
     mesh_added: Query<&ChunkData, Added<Mesh3d>>,
-    all: Query<(Option<&ChunkId>, &ChunkData)>,
+    all: Query<&ChunkData>,
     mut removed: RemovedComponents<Mesh3d>,
 ) {
     for chunk in mesh_added.iter() {
@@ -39,19 +39,12 @@ fn update_on_mesh(
 
     for e in removed.read() {
         if let Ok(chunk) = all.get(e) {
-            diagnostics.meshed -= chunk.1.voxel_count();
+            diagnostics.meshed -= chunk.voxel_count();
             #[cfg(feature = "log")]
-            if let Some(id) = chunk.0 {
-                warn!(
-                    "Chunk {:?} had its mesh removed, but was not its self removed this is bad practice",
-                    id
-                );
-            } else {
-                warn!(
-                    "Chunk {:?} had its mesh removed, but was not its self removed this is bad practice",
-                    e
-                );
-            };
+            warn!(
+                "Chunk({:?}) had its mesh removed, but was not its self removed this is bad practice",
+                e
+            );
         }
     }
 }

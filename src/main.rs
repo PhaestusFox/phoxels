@@ -12,7 +12,7 @@ fn main() {
         DefaultPlugins
             .set(WindowPlugin {
                 primary_window: Some(Window {
-                    present_mode: bevy::window::PresentMode::AutoNoVsync,
+                    // present_mode: bevy::window::PresentMode::AutoNoVsync,
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -20,6 +20,10 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
         bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
     ));
+    app.insert_resource(phoxels::prelude::GeneratorLimits {
+        max_generating_chunks: 40,
+        max_meshing_chunks: 40,
+    });
     app.add_plugins(phoxels::PhoxelsPlugin);
     // StandardMaterial
     // app.add_plugins(bevy_mod_debugdump::CommandLineArgs);
@@ -27,7 +31,7 @@ fn main() {
     app.add_plugins((player::plugin, diganostics::plugin));
     app.add_plugins(map::plugin);
     app.add_systems(Update, warn_no_textures);
-
+    app.add_systems(Update, test);
     app.run();
 }
 
@@ -58,5 +62,16 @@ see credit.txt for details"#
     }
     if asset_server.is_loaded(&texture.terrain) {
         *done = true;
+    }
+}
+
+fn test(camera: Single<&GlobalTransform, With<Camera>>, input: Res<ButtonInput<KeyCode>>) {
+    if input.just_pressed(KeyCode::F12) {
+        let b: bevy::math::Affine3 = (&camera.affine()).into();
+        println!("{:.02?}", b.matrix3);
+        let m: bevy::math::Affine3A = (&b).into();
+        println!("{:.02?}", m.matrix3);
+        let (scale, _rot, _translation) = m.to_scale_rotation_translation();
+        println!("{:.02?}", scale);
     }
 }

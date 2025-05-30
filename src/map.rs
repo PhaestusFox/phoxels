@@ -10,7 +10,7 @@ use bevy::{
 };
 use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
-use phoxels::core::{BlockMeta, ChunkId};
+use phoxels::core::{BlockMeta, PhoxelGenerator};
 
 use crate::{
     diganostics::VoxelCount,
@@ -35,9 +35,19 @@ pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_world);
     let map_descriptor = MapDescriptor::from_world(app.world_mut());
     app.insert_resource(map_descriptor.clone());
-    app.insert_resource(phoxels::prelude::PhoxelGenerator::new(move |id| {
+    let var = std::sync::Mutex::new(phoxels::utils::BlockIter::<201>::new());
+    app.insert_resource(phoxels::prelude::PhoxelGenerator::new(move || {
         let mut chunk = phoxels::prelude::ChunkData::empty();
         let map_descriptor = map_descriptor.read().unwrap();
+        let (x, y, z) = var
+            .lock()
+            .unwrap()
+            .next()
+            .expect("more itrations than 201*201");
+        if y != 0 {
+            panic!()
+        }
+        let id = IVec3::new(x as i32, y as i32, z as i32);
         for x in 0..CHUNK_SIZE as usize {
             for z in 0..CHUNK_SIZE as usize {
                 let h = map_descriptor
@@ -59,46 +69,46 @@ pub fn plugin(app: &mut App) {
         }
         chunk
     }));
-    app.add_systems(
-        Update,
-        sort_gen_order.before(phoxels::prelude::ChunkSets::Mesh),
-    );
-    app.add_systems(
-        Update,
-        sort_chunk_order.before(phoxels::prelude::ChunkSets::Mesh),
-    );
+    // app.add_systems(
+    //     Update,
+    //     sort_gen_order.before(phoxels::prelude::ChunkSets::Mesh),
+    // );
+    // app.add_systems(
+    //     Update,
+    //     sort_chunk_order.before(phoxels::prelude::ChunkSets::Mesh),
+    // );
     // .add_systems(Last, start_generating_chunks)
     // .add_systems(First, (extract_chunkdata, populate_chunks).chain());
 }
 
-fn sort_gen_order(mut chunks: ResMut<phoxels::ChunkMesher>) {
-    chunks.set_priority(|c1, c2| {
-        if c1.abs().length_squared() > c2.abs().length_squared() {
-            std::cmp::Ordering::Greater
-        } else if c1.abs().length_squared() < c2.abs().length_squared() {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    })
-}
+// fn sort_gen_order(mut chunks: ResMut<phoxels::ChunkMesher>) {
+//     chunks.set_priority(|c1, c2| {
+//         if c1.abs().length_squared() > c2.abs().length_squared() {
+//             std::cmp::Ordering::Greater
+//         } else if c1.abs().length_squared() < c2.abs().length_squared() {
+//             std::cmp::Ordering::Less
+//         } else {
+//             std::cmp::Ordering::Equal
+//         }
+//     })
+// }
 
-fn sort_chunk_order(mut chunks: ResMut<phoxels::ChunkGenerator>) {
-    chunks.set_priority(|c1, c2| {
-        if c1.abs().length_squared() < c2.abs().length_squared() {
-            std::cmp::Ordering::Greater
-        } else if c1.abs().length_squared() > c2.abs().length_squared() {
-            std::cmp::Ordering::Less
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    })
-}
+// fn sort_chunk_order(mut chunks: ResMut<phoxels::ChunkGenerator>) {
+//     chunks.set_priority(|c1, c2| {
+//         if c1.abs().length_squared() < c2.abs().length_squared() {
+//             std::cmp::Ordering::Greater
+//         } else if c1.abs().length_squared() > c2.abs().length_squared() {
+//             std::cmp::Ordering::Less
+//         } else {
+//             std::cmp::Ordering::Equal
+//         }
+//     })
+// }
 
-// #[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
-// #[component(immutable, on_insert = ChunkId::on_add)]
-// #[require(Transform, Visibility, Aabb=Aabb::from_min_max(Vec3::NEG_ONE * CHUNK_SIZE as f32 / 2., Vec3::ONE * CHUNK_SIZE as f32 / 2.))]
-// struct ChunkId(IVec3);
+#[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
+#[component(immutable, on_insert = ChunkId::on_add)]
+#[require(Transform, Visibility)]
+struct ChunkId(IVec3);
 
 // impl std::fmt::Display for ChunkId {
 //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -106,25 +116,27 @@ fn sort_chunk_order(mut chunks: ResMut<phoxels::ChunkGenerator>) {
 //     }
 // }
 
-// impl ChunkId {
-//     fn on_add(mut world: bevy::ecs::world::DeferredWorld, ctx: bevy::ecs::component::HookContext) {
-//         let id = *world
-//             .entity(ctx.entity)
-//             .get::<ChunkId>()
-//             .expect("onadd of ChunkId");
-//         world
-//             .entity_mut(ctx.entity)
-//             .get_mut::<Transform>()
-//             .expect("ChunkId Requires Transform")
-//             .translation = id.to_vec3();
-//         let mut map = world.resource_mut::<MapData>();
-//         map.to_gen_data.insert(id, ctx.entity);
-//     }
+impl ChunkId {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {
+        ChunkId(IVec3::new(x, y, z))
+    }
 
-//     fn to_vec3(self) -> Vec3 {
-//         self.0.as_vec3() * CHUNK_SIZE as f32
-//     }
-// }
+    fn on_add(mut world: bevy::ecs::world::DeferredWorld, ctx: bevy::ecs::component::HookContext) {
+        let id = *world
+            .entity(ctx.entity)
+            .get::<ChunkId>()
+            .expect("onadd of ChunkId");
+        world
+            .entity_mut(ctx.entity)
+            .get_mut::<Transform>()
+            .expect("ChunkId Requires Transform")
+            .translation = id.to_vec3();
+    }
+
+    fn to_vec3(self) -> Vec3 {
+        self.0.as_vec3() * CHUNK_SIZE as f32
+    }
+}
 
 struct ChunkBlockIter {
     x: i32,
@@ -174,6 +186,7 @@ fn spawn_world(
     mut commands: Commands,
     block_data: Res<BlockDescriptor>,
     asset_server: Res<AssetServer>,
+    generator: Res<PhoxelGenerator>,
 ) {
     // map_descriptor.min_max_y();
     commands.spawn((
@@ -185,7 +198,11 @@ fn spawn_world(
     ),));
     for z in -MAP_SIZE..=MAP_SIZE {
         for x in -MAP_SIZE..=MAP_SIZE {
-            commands.spawn((ChunkId::new(x, 0, z), MeshMaterial3d(block_data.material())));
+            commands.spawn((
+                ChunkId::new(x, 0, z),
+                MeshMaterial3d(block_data.material()),
+                generator.clone(),
+            ));
         }
     }
 }

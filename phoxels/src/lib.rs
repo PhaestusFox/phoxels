@@ -14,15 +14,15 @@ pub mod prelude {
     pub use crate::PhoxelsPlugin;
     pub use crate::block::Block;
     pub use crate::chunk::ChunkData;
-    pub use crate::chunk::ChunkId;
     pub use crate::chunk::ChunkSets;
     pub use crate::chunk::GeneratorLimits;
-    pub use crate::chunk::manager::ChunkManager;
     pub use crate::chunk::manager::PhoxelGenerator;
     #[cfg(feature = "diagnostics")]
     pub use crate::diagnostics::VoxelCount;
     pub use crate::simple_shader::VoxelMaterial;
 }
+
+pub mod utils;
 
 pub use crate::chunk::manager::{ChunkGenerator, ChunkMesher};
 
