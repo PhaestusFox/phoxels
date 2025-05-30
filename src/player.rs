@@ -44,6 +44,7 @@ fn player_look(
     time: Res<Time>,
     // use window to check if we should let the player look or not
     window: Single<&Window, With<PrimaryWindow>>,
+    inputs: Res<ButtonInput<KeyCode>>,
 ) {
     // if using MouseMotion events need to accumulate them
     // let delta = mouse_motion.read().map(|e| e.delta).sum();
@@ -53,16 +54,20 @@ fn player_look(
         return;
     }
 
+    if inputs.pressed(KeyCode::F10) {
+        println!("Mouse movement: {:?}", mouse_movement.delta);
+    }
+
     // change to use 100. divided by min width and hight, this will make the game feel the same even on different resolutions
-    let sensitivity = 100. / window.width().min(window.height());
+    let sensitivity = 1. / window.width().min(window.height());
 
     //get angles as euler angles because they are more natural then Quats, don't need role
     let (mut yaw, mut pitch, _) = player.rotation.to_euler(EulerRot::YXZ);
     // subtract y movement for pitch - up/down
-    pitch -= mouse_movement.delta.y * time.delta_secs() * sensitivity;
+    pitch -= mouse_movement.delta.y * sensitivity;
 
     // subtract x movement for yaw - left/right
-    yaw -= mouse_movement.delta.x * time.delta_secs() * sensitivity;
+    yaw -= mouse_movement.delta.x * sensitivity;
 
     // stops you looking past straight up, it will flickering as the value becomes negative
     pitch = pitch.clamp(-1.57, 1.57);
@@ -149,14 +154,22 @@ fn player_move(
 }
 
 fn change_speed(mut player: Single<&mut Player>, inputs: Res<ButtonInput<KeyCode>>) {
+    let mut power = 1.;
+    if inputs.pressed(KeyCode::ShiftLeft) {
+        power = 5.;
+    }
+    if inputs.just_pressed(KeyCode::AltLeft) {
+        power *= 10.;
+    }
+
     if inputs.just_pressed(KeyCode::NumpadAdd) {
-        player.speed += 10.;
+        player.speed += 10. * power;
     }
     if inputs.just_pressed(KeyCode::NumpadSubtract) {
-        player.speed -= 10.;
+        player.speed -= 10. * power;
         player.speed = player.speed.clamp(10., f32::INFINITY);
     }
     if inputs.just_pressed(KeyCode::NumpadMultiply) {
-        player.speed = 50.;
+        player.speed = 50. * power;
     }
 }

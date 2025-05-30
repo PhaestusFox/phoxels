@@ -95,10 +95,11 @@ impl ChunkData {
 
     /// Get the block meta at the given coordinates
     /// Returns None if out of bounds
-    pub fn get_block_meta(&self, x: usize, y: usize, z: usize) -> Option<&BlockMeta> {
+    #[inline(always)]
+    pub fn get_block_meta(&self, x: usize, y: usize, z: usize) -> Option<BlockMeta> {
         if x < CHUNK_SIZE.size() && y < CHUNK_SIZE.size() && z < CHUNK_SIZE.size() {
             let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-            Some(&self.blocks[index])
+            Some(self.blocks[index])
         } else {
             None
         }
@@ -106,15 +107,15 @@ impl ChunkData {
 
     /// Get the block at the given coordinates
     /// return BlockMeta::EMPTY if out of bounds
+    #[inline(always)]
     pub fn block(&self, x: usize, y: usize, z: usize) -> BlockMeta {
-        let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-        self.blocks.get(index).cloned().unwrap_or(BlockMeta::EMPTY)
+        self.get_block_meta(x, y, z).unwrap_or(BlockMeta::EMPTY)
     }
 
     /// Get the block at the given coordinates and convert it to the specified type
     pub fn get_block<T: From<BlockMeta>>(&self, x: usize, y: usize, z: usize) -> Option<T> {
         let block_meta = self.get_block_meta(x, y, z)?;
-        Some(T::from(*block_meta))
+        Some(T::from(block_meta))
     }
 
     pub(crate) async fn generate_mesh(self) -> Mesh {

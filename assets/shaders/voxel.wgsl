@@ -10,6 +10,7 @@ struct VertexOutput {
     @location(0) world_position: vec4<f32>,
     @location(1) world_normal: vec3<f32>,
     @location(2) block_type: u32,
+    @location(3) scale: vec3<f32>,
 }
 
 struct FragmentOutput {
@@ -52,38 +53,39 @@ fn fragment(
             dp -= 0.05;
         }
     }
-    var color = vec4(0.);
     let x = (in.block_type) % 16;
     let y = (in.block_type) / 16;
     var uvx = f32(x) / 16.;
     var uvy = (1.+f32(y)) / 16.;
-
+    
     var axis: f32;
     if abs(world_normal.y) < 0.5 {
-        axis = in.world_position.y % 1;
+        axis = (in.world_position.y * in.scale.y) % 1;
     } else {
-        axis = in.world_position.z % 1;
+        axis = (in.world_position.z * in.scale.z) % 1;
     };
     if axis < 0 {
         axis += 1;
     }
     uvy -= (axis * texture_step);
-
+    
     if abs(world_normal.x) < 0.5 {
-        axis = in.world_position.x % 1;
+        axis = (in.world_position.x * in.scale.x) % 1;
     } else {
-        axis = in.world_position.z % 1;
+        axis = (in.world_position.z * in.scale.z) % 1;
     };
     if axis < 0 {
         axis += 1;
     }
     uvx += axis * texture_step;
-
+    
     if in.block_type == 77 && world_normal.y > 0.5 { // grass
         uvx += 1. / 16.;
         // uvy += 4. / 16.;
     }
-
+    
+    // var color = vec4(abs(world_normal), 1.0);
+    // if world_normal.x < -0.1 { color.x = 0.1; } else {color.x = 1; };
     // if (world_normal.y) < 0.5 {
     //     var prog_y = in.world_position.y % 1;
     //     if prog_y < 0 {
@@ -122,6 +124,15 @@ fn fragment(
     view_transformations::position_world_to_clip,
 }
 
+// fn affine3_to_square(affine: mat3x4<f32>) -> mat4x4<f32> {
+//     return transpose(mat4x4<f32>(
+//         affine[0],
+//         affine[1],
+//         affine[2],
+//         vec4<f32>(0.0, 0.0, 0.0, 1.0),
+//     ));
+// }
+
 @vertex
 fn vertex(vertex: Vertex) -> VertexOutput {
     var out: VertexOutput;
@@ -136,6 +147,23 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.block_type = (vertex.position >> 24) & 255;
     let pos = vec3(f32(x), f32(y), f32(z));
 
+
+    // calculate scale
+    out.scale = vec3<f32>(1.);
+    // 1. calculate the determinant of the affine matrix
+    // determinant = dot(z, cross(x, y))
+    let determinant = determinant(in_world_from_local);
+    // 2. x = length of the first column of the affine matrix
+    out.scale.x = 1. / length(in_world_from_local[0]);
+    // 3. is the determinant negative? if so, negate the x of the scale
+    if determinant < 0. {
+        out.scale.x = -out.scale.x;
+    }
+    // 4. y = length of the second column of the affine matrix
+    out.scale.y = 1. / length(in_world_from_local[1]);
+    // 5. z = length of the third column of the affine matrix
+    out.scale.z = 1. / length(in_world_from_local[2]);
+    // let scale = vec3<f32>(det, det, det);
 
     /// set pos
     out.world_position = mesh_functions::mesh_position_local_to_world(world_from_local, vec4<f32>(pos, 1.0));

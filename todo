@@ -1,0 +1,17 @@
+- [] add atlas shape to shader
+- [] add basic greedy meshing
+- [] add collider generatior
+- [x] work out how to scale chunks
+- [] add per-block face overrides
+- [] swap ChunkId to Entity as unique identifier
+- [] use on_add PhoxelGenerator to start generating chunks
+- [] look into using generic as input for PhoxelGenerator fn
+  - [] use generic in start generation to get data to pass to PhoxelGenerator
+  - [] log an error if entity does not have generating component but have PhoxelGenerator?
+  - [] make PhoxelGenerator generic a required component for PhoxelGenerator
+- [] add component to indicate a chunk should use default PhoxelGenerator
+- [] allow dynamic chunk size
+- [] benchmark using Vec<Block> vs [Block; CHUNK_SIZE.volume()]
+- [] work out if can add whole mesh attribute rather then per vertex
+
+- [] make "spaceual" feature flag and put ChunkId behind it; used when a chunks position also uniquely identifies it
