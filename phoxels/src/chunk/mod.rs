@@ -38,6 +38,14 @@ impl ChunkSize {
     pub const fn volume(&self) -> usize {
         self.size() * self.size() * self.size()
     }
+
+    pub const fn bits_per_axis(&self) -> usize {
+        match self {
+            ChunkSize::Small => 4,
+            ChunkSize::Medium => 5,
+            ChunkSize::Large => 6,
+        }
+    }
 }
 
 #[derive(bevy::prelude::Component, Clone)]

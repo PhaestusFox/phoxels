@@ -4,7 +4,7 @@
 - [x] add component to indicate a chunk should generate
 - [x] add atlas shape to shader
 - [x] add per-block face overrides
-- [] add basic greedy meshing
+- [-] add basic greedy meshing
 - [] add collider generatior
 - [] allow dynamic chunk size
 - [] look into using generic as input for PhoxelGenerator fn

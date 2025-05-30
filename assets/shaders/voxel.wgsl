@@ -167,10 +167,10 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     // Use vertex_no_morph.instance_index instead of vertex.instance_index to work around a wgpu dx12 bug.
     // See https://github.com/gfx-rs/naga/issues/2416 .
     var world_from_local = in_world_from_local;
-    let x = vertex.position & 255;
-    let y = (vertex.position >> 8) & 255;
-    let z = (vertex.position >> 16) & 255;
-    out.block_type = (vertex.position >> 24) & 255;
+    let x = vertex.position & 31;
+    let y = (vertex.position >> 5) & 31;
+    let z = (vertex.position >> 10) & 31;
+    out.block_type = (vertex.position >> 18) & 255;
     let pos = vec3(f32(x), f32(y), f32(z));
 
 

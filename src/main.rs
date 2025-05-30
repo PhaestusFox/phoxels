@@ -1,4 +1,8 @@
-use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+use bevy::{
+    input::common_conditions::input_just_pressed,
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
+    prelude::*,
+};
 
 mod diganostics;
 mod map;
@@ -20,6 +24,11 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
         bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
     ));
+    // app.insert_resource(WireframeConfig {
+    //     global: true,
+    //     ..Default::default()
+    // });
+    // app.add_plugins(WireframePlugin::default());
     app.insert_resource(phoxels::prelude::GeneratorLimits {
         max_generating_chunks: 100,
         max_meshing_chunks: 100,
@@ -32,6 +41,7 @@ fn main() {
     app.add_plugins(map::plugin);
     app.add_systems(Update, warn_no_textures);
     app.add_systems(Update, test);
+    app.add_systems(Startup, spawn_test_cube);
     app.run();
 }
 
@@ -74,4 +84,12 @@ fn test(camera: Single<&GlobalTransform, With<Camera>>, input: Res<ButtonInput<K
         let (scale, _rot, _translation) = m.to_scale_rotation_translation();
         println!("{:.02?}", scale);
     }
+}
+
+fn spawn_test_cube(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let mesh = asset_server.add(Cuboid::from_size(Vec3::ONE * 20.).into());
+    commands.spawn((
+        Mesh3d(mesh),
+        Transform::from_translation(Vec3::new(0., 1., 0.)),
+    ));
 }
