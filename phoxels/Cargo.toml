@@ -16,6 +16,7 @@ standerd_position = []
 
 [dev-dependencies]
 criterion = { version = "0.6", features = ["html_reports"] }
+rand = "*"
 
 [[bench]]
 name = "mesh_gen"

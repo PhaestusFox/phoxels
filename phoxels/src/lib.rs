@@ -4,6 +4,7 @@ mod simple_shader;
 
 pub mod core {
     pub use crate::block::BlockMeta;
+    pub use crate::chunk::CHUNK_SIZE;
     pub use crate::chunk::manager::PhoxelGeneratorData;
     pub use crate::prelude::*;
 }
@@ -35,10 +36,7 @@ use std::marker::PhantomData;
 
 pub use crate::chunk::manager::{ChunkGenerator, ChunkMesher};
 
-use bevy::{
-    ecs::component::Component,
-    prelude::{App, Plugin},
-};
+use bevy::prelude::{App, Plugin};
 
 pub struct PhoxelsPlugin<T: PhoxelGeneratorData = ()>(PhantomData<T>);
 

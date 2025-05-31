@@ -4,7 +4,7 @@ use crate::core::*;
 use bevy::{
     app::{App, Plugin, Update},
     ecs::schedule::IntoScheduleConfigs,
-    prelude::{Component, Deref, DerefMut, IVec3, Transform, Vec3, Visibility},
+    prelude::Vec3,
     render::{mesh::Mesh, primitives::Aabb},
 };
 
@@ -13,9 +13,9 @@ use manager::{ChunkGenerator, ChunkMesher};
 
 pub(crate) mod manager;
 
-const CHUNK_SIZE: ChunkSize = ChunkSize::Medium;
+pub const CHUNK_SIZE: ChunkSize = ChunkSize::Medium;
 
-enum ChunkSize {
+pub enum ChunkSize {
     Small = 8,
     Medium = 16,
     Large = 32,
@@ -154,7 +154,7 @@ impl ChunkData {
             chunk_data.update_count();
             let c = chunk_data.voxel_count();
             let mut diagnostics = world.resource_mut::<crate::diagnostics::VoxelCount>();
-            diagnostics.loaded += c as usize;
+            diagnostics.loaded += c;
         }
         #[cfg(feature = "log")]
         bevy::log::trace!("Chunk({:?}) added to meshing que", ctx.entity);
@@ -174,7 +174,7 @@ impl ChunkData {
             chunk_data.update_count();
             let c = chunk_data.voxel_count();
             let mut diagnostics = world.resource_mut::<crate::diagnostics::VoxelCount>();
-            diagnostics.loaded -= c as usize;
+            diagnostics.loaded -= c;
         }
     }
     #[cfg(feature = "diagnostics")]
@@ -240,7 +240,7 @@ pub struct ChunkPlugin<T: PhoxelGeneratorData = ()>(PhantomData<T>);
 
 impl<T: PhoxelGeneratorData> Default for ChunkPlugin<T> {
     fn default() -> Self {
-        ChunkPlugin(PhantomData::default())
+        ChunkPlugin(PhantomData)
     }
 }
 
