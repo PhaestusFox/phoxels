@@ -1,9 +1,9 @@
-use bevy::math::{IVec3, UVec3};
+use bevy::math::UVec3;
 use bevy::{asset::RenderAssetUsages, render::mesh::Mesh};
 
 use super::{CHUNK_SIZE, ChunkData};
 use crate::core::BlockMeta;
-use crate::utils::BlockIter;
+use crate::utils::{BlockIter, DynBlockIter};
 
 // Back face
 const BACK_FACE: [Vertex; 4] = [
@@ -64,14 +64,15 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
     let mut positions_old = Vec::new();
     let mut indices = Vec::new();
     let mut checked = bevy::platform::collections::HashMap::new();
-    for (x, y, z) in BlockIter::<{ super::CHUNK_SIZE.size() }>::new() {
+    // let UVec3 { x, y, z } = data.size;
+    for (x, y, z) in
+        BlockIter::<{ CHUNK_SIZE.size() }, { CHUNK_SIZE.size() }, { CHUNK_SIZE.size() }>::new()
+    {
         let block = data.block(x, y, z);
         if block == BlockMeta::EMPTY {
             continue;
         }
-        let mut current: Face = checked
-            .remove(&UVec3::new(x as u32, y as u32, z as u32))
-            .unwrap_or_default();
+        let mut current: Face = checked.remove(&UVec3::new(x, y, z)).unwrap_or_default();
         if current.all() {
             continue; // All block already added
         }
@@ -87,9 +88,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if !data.block(x, y + 1, z).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(x, y, z)).or_default();
                     if other.top() {
                         break; // Already checked
                     }
@@ -105,16 +104,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                         if !data.block(x, y + 1, z).is_transparent() {
                             break 'z_loop;
                         }
-                        if checked
-                            .get(&UVec3::new(x as u32, y as u32, z as u32))
-                            .is_some_and(|f| f.top())
-                        {
+                        if checked.get(&UVec3::new(x, y, z)).is_some_and(|f| f.top()) {
                             break 'z_loop; // Already checked
                         }
                     }
                     for x in x..(x + x_run) {
                         checked
-                            .entry(UVec3::new(x as u32, y as u32, z as u32))
+                            .entry(UVec3::new(x, y, z))
                             .or_insert_with(Face::from_top)
                             .set_top();
                     }
@@ -138,9 +134,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if y != 0 && !data.block(x, y - 1, z).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(x, y, z)).or_default();
                     if other.bottom() {
                         break; // Already checked
                     }
@@ -157,7 +151,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                             break 'z_look;
                         }
                         if checked
-                            .get(&UVec3::new(x as u32, y as u32, z as u32))
+                            .get(&UVec3::new(x, y, z))
                             .is_some_and(|f| f.bottom())
                         {
                             break 'z_look; // Already checked
@@ -165,7 +159,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     }
                     for x in x..(x + x_run) {
                         checked
-                            .entry(UVec3::new(x as u32, y as u32, z as u32))
+                            .entry(UVec3::new(x, y, z))
                             .or_insert_with(Face::from_bottom)
                             .set_bottom();
                     }
@@ -189,9 +183,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if x != 0 && !data.block(x - 1, y, nz).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(x as u32, y as u32, nz as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(x, y, nz)).or_default();
                     if other.left() {
                         break; // Already checked
                     }
@@ -208,7 +200,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                             break 'y_look;
                         }
                         if checked
-                            .get(&UVec3::new(x as u32, ny as u32, nz as u32))
+                            .get(&UVec3::new(x, ny, nz))
                             .is_some_and(|f| f.left())
                         {
                             break 'y_look; // Already checked
@@ -216,7 +208,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     }
                     for nz in z..(z + z_run) {
                         checked
-                            .entry(UVec3::new(x as u32, ny as u32, nz as u32))
+                            .entry(UVec3::new(x, ny, nz))
                             .or_insert_with(Face::from_left)
                             .set_left();
                     }
@@ -240,9 +232,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if !data.block(x + 1, y, nz).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(x as u32, y as u32, nz as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(x, y, nz)).or_default();
                     if other.right() {
                         break; // Already checked
                     }
@@ -259,7 +249,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                             break 'y_look;
                         }
                         if checked
-                            .get(&UVec3::new(x as u32, ny as u32, nz as u32))
+                            .get(&UVec3::new(x, ny, nz))
                             .is_some_and(|f| f.right())
                         {
                             break 'y_look; // Already checked
@@ -267,7 +257,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     }
                     for nz in z..(z + z_run) {
                         checked
-                            .entry(UVec3::new(x as u32, ny as u32, nz as u32))
+                            .entry(UVec3::new(x, ny, nz))
                             .or_insert_with(Face::from_right)
                             .set_right();
                     }
@@ -291,9 +281,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if z != 0 && !data.block(nx, y, z - 1).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(nx as u32, y as u32, z as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(nx, y, z)).or_default();
                     if other.front() {
                         break; // Already checked
                     }
@@ -310,7 +298,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                             break 'y_look;
                         }
                         if checked
-                            .get(&UVec3::new(nx as u32, ny as u32, z as u32))
+                            .get(&UVec3::new(nx, ny, z))
                             .is_some_and(|f| f.front())
                         {
                             break 'y_look; // Already checked
@@ -318,7 +306,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     }
                     for nx in x..(x + x_run) {
                         checked
-                            .entry(UVec3::new(nx as u32, ny as u32, z as u32))
+                            .entry(UVec3::new(nx, ny, z))
                             .or_insert_with(Face::from_front)
                             .set_front();
                     }
@@ -342,9 +330,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if !data.block(nx, y, z + 1).is_transparent() {
                         break;
                     }
-                    let other = checked
-                        .entry(UVec3::new(nx as u32, y as u32, z as u32))
-                        .or_default();
+                    let other = checked.entry(UVec3::new(nx, y, z)).or_default();
                     if other.back() {
                         break; // Already checked
                     }
@@ -361,7 +347,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                             break 'y_look;
                         }
                         if checked
-                            .get(&UVec3::new(nx as u32, ny as u32, z as u32))
+                            .get(&UVec3::new(nx, ny, z))
                             .is_some_and(|f| f.back())
                         {
                             break 'y_look; // Already checked
@@ -369,7 +355,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     }
                     for nx in x..(x + x_run) {
                         checked
-                            .entry(UVec3::new(nx as u32, ny as u32, z as u32))
+                            .entry(UVec3::new(nx, ny, z))
                             .or_insert_with(Face::from_back)
                             .set_back();
                     }
@@ -384,13 +370,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_back();
         }
 
-        checked.insert(UVec3::new(x as u32, y as u32, z as u32), current);
+        checked.insert(UVec3::new(x, y, z), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
         positions.extend(m_block.vertexs.iter().map(|p| {
             let p = p.0.to_pos(p.1, p.2, p.3);
-            let x = p[0] + x as u32;
-            let y = p[1] + y as u32;
-            let z = p[2] + z as u32;
+            let x = p[0] + x;
+            let y = p[1] + y;
+            let z = p[2] + z;
             #[cfg(feature = "standerd_position")]
             positions_old.push([x as f32, y as f32, z as f32]);
             x | y << CHUNK_SIZE.bits_per_axis()

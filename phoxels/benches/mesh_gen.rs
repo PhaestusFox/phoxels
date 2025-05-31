@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use criterion::{Criterion, criterion_group, criterion_main};
 use phoxels::core::CHUNK_SIZE;
 use phoxels::prelude::*;
@@ -57,6 +59,8 @@ fn get_worst_case() -> ChunkData {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
+    let mut c = c.benchmark_group("mesh_gen");
+    c.measurement_time(Duration::from_secs(10)).sample_size(250);
     c.bench_function("gen_empty", |b| {
         b.iter_batched(
             get_empty,

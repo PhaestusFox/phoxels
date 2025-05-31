@@ -38,23 +38,22 @@ pub fn plugin(app: &mut App) {
     app.add_systems(Startup, spawn_world);
     let map_descriptor = MapDescriptor::from_world(app.world_mut());
     app.insert_resource(map_descriptor.clone());
-    let var = std::sync::Mutex::new(phoxels::utils::BlockIter::<201>::new());
     app.insert_resource(phoxels::prelude::PhoxelGenerator::new(
         move |id: GeneratorDataType| {
             let mut chunk = phoxels::prelude::ChunkData::empty();
             let map_descriptor = map_descriptor.read().unwrap();
             // let (id, _) = id;
-            for x in 0..CHUNK_SIZE as usize {
-                for z in 0..CHUNK_SIZE as usize {
+            for x in 0..CHUNK_SIZE {
+                for z in 0..CHUNK_SIZE {
                     let h = map_descriptor
                         .get_height(x as i32 + id.x * CHUNK_SIZE, z as i32 + id.z * CHUNK_SIZE);
                     for y in (id.y * CHUNK_SIZE)..(id.y + 1) * CHUNK_SIZE {
                         if y > h {
                             if x == 1 && z == 1 {
                                 chunk.set_block(
-                                    x,
-                                    (y - id.y * CHUNK_SIZE) as usize,
-                                    z,
+                                    x as u32,
+                                    (y - id.y * CHUNK_SIZE) as u32,
+                                    z as u32,
                                     BlockType::Furnuse,
                                 );
                             }
@@ -67,7 +66,7 @@ pub fn plugin(app: &mut App) {
                         } else {
                             BlockType::Stone
                         };
-                        chunk.set_block(x, (y - id.y * CHUNK_SIZE) as usize, z, block);
+                        chunk.set_block(x as u32, (y - id.y * CHUNK_SIZE) as u32, z as u32, block);
                     }
                 }
             }

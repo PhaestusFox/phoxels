@@ -4,6 +4,7 @@ use crate::core::*;
 use bevy::{
     app::{App, Plugin, Update},
     ecs::schedule::IntoScheduleConfigs,
+    math::UVec3,
     prelude::Vec3,
     render::{mesh::Mesh, primitives::Aabb},
 };
@@ -23,7 +24,7 @@ pub enum ChunkSize {
 
 impl ChunkSize {
     #[inline(always)]
-    pub const fn size(&self) -> usize {
+    pub const fn size(&self) -> u32 {
         match self {
             ChunkSize::Small => 8,
             ChunkSize::Medium => 16,
@@ -32,16 +33,16 @@ impl ChunkSize {
     }
 
     #[inline(always)]
-    pub const fn aria(&self) -> usize {
+    pub const fn aria(&self) -> u32 {
         self.size() * self.size()
     }
 
     #[inline(always)]
-    pub const fn volume(&self) -> usize {
+    pub const fn volume(&self) -> u32 {
         self.size() * self.size() * self.size()
     }
 
-    pub const fn bits_per_axis(&self) -> usize {
+    pub const fn bits_per_axis(&self) -> u32 {
         match self {
             ChunkSize::Small => 4,
             ChunkSize::Medium => 5,
@@ -57,7 +58,8 @@ impl ChunkSize {
     Vec3::ONE * CHUNK_SIZE.size() as f32,
 ))]
 pub struct ChunkData {
-    blocks: [BlockMeta; CHUNK_SIZE.volume()],
+    blocks: Vec<BlockMeta>,
+    size: UVec3,
     #[cfg(feature = "diagnostics")]
     count: usize,
 }
@@ -65,7 +67,8 @@ pub struct ChunkData {
 impl ChunkData {
     pub fn empty() -> Self {
         ChunkData {
-            blocks: [BlockMeta::default(); CHUNK_SIZE.volume()],
+            blocks: vec![BlockMeta::default(); CHUNK_SIZE.volume() as usize],
+            size: UVec3::splat(CHUNK_SIZE.size() as u32),
             #[cfg(feature = "diagnostics")]
             count: 0,
         }
@@ -73,21 +76,22 @@ impl ChunkData {
 
     pub fn solid(block: impl Block) -> Self {
         ChunkData {
-            blocks: [block.into(); CHUNK_SIZE.volume()],
+            blocks: vec![block.into(); CHUNK_SIZE.volume() as usize],
+            size: UVec3::splat(CHUNK_SIZE.size() as u32),
             #[cfg(feature = "diagnostics")]
-            count: CHUNK_SIZE.volume(),
+            count: CHUNK_SIZE.volume() as usize,
         }
     }
 
     #[inline(always)]
-    fn set_block_unchecked(&mut self, x: usize, y: usize, z: usize, block: impl Into<BlockMeta>) {
+    fn set_block_unchecked(&mut self, x: u32, y: u32, z: u32, block: impl Into<BlockMeta>) {
         let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-        self.blocks[index] = block.into();
+        self.blocks[index as usize] = block.into();
     }
 
     /// Set the block at the given coordinates
     /// Panics if the coordinates are out of bounds
-    pub fn set_block(&mut self, x: usize, y: usize, z: usize, block: impl Into<BlockMeta>) {
+    pub fn set_block(&mut self, x: u32, y: u32, z: u32, block: impl Into<BlockMeta>) {
         debug_assert!(
             x < CHUNK_SIZE.size() && y < CHUNK_SIZE.size() && z < CHUNK_SIZE.size(),
             "block index out of bounds: ({}, {}, {})",
@@ -98,7 +102,7 @@ impl ChunkData {
         #[cfg(feature = "diagnostics")]
         let block = block.into();
         #[cfg(feature = "diagnostics")]
-        if self.blocks[x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria()] != block {
+        if self.blocks[(x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria()) as usize] != block {
             if block == BlockMeta::EMPTY {
                 self.count -= 1;
             } else {
@@ -114,10 +118,10 @@ impl ChunkData {
     /// Get the block meta at the given coordinates
     /// Returns None if out of bounds
     #[inline(always)]
-    pub fn get_block_meta(&self, x: usize, y: usize, z: usize) -> Option<BlockMeta> {
+    pub fn get_block_meta(&self, x: u32, y: u32, z: u32) -> Option<BlockMeta> {
         if x < CHUNK_SIZE.size() && y < CHUNK_SIZE.size() && z < CHUNK_SIZE.size() {
             let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-            Some(self.blocks[index])
+            Some(self.blocks[index as usize])
         } else {
             None
         }
@@ -126,12 +130,12 @@ impl ChunkData {
     /// Get the block at the given coordinates
     /// return BlockMeta::EMPTY if out of bounds
     #[inline(always)]
-    pub fn block(&self, x: usize, y: usize, z: usize) -> BlockMeta {
+    pub fn block(&self, x: u32, y: u32, z: u32) -> BlockMeta {
         self.get_block_meta(x, y, z).unwrap_or(BlockMeta::EMPTY)
     }
 
     /// Get the block at the given coordinates and convert it to the specified type
-    pub fn get_block<T: From<BlockMeta>>(&self, x: usize, y: usize, z: usize) -> Option<T> {
+    pub fn get_block<T: From<BlockMeta>>(&self, x: u32, y: u32, z: u32) -> Option<T> {
         let block_meta = self.get_block_meta(x, y, z)?;
         Some(T::from(block_meta))
     }
