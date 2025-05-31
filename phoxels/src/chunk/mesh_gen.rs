@@ -59,7 +59,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         RenderAssetUsages::RENDER_WORLD,
     );
     let mut positions = Vec::new();
-    // let mut positions_old = Vec::new();
+
+    #[cfg(feature = "standerd_position")]
+    let mut positions_old = Vec::new();
     let mut indices = Vec::new();
     let mut checked = bevy::platform::collections::HashMap::new();
     for (x, y, z) in BlockIter::<{ super::CHUNK_SIZE.size() }>::new() {
@@ -88,7 +90,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     x_run += 1;
                     checked
                         .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_insert_with(Face::from_top);
+                        .or_insert_with(Face::from_top)
+                        .set_top();
                 }
                 let mut z_run = 1;
                 'z_loop: for z in (z + 1)..CHUNK_SIZE.size() {
@@ -103,7 +106,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     for x in x..(x + x_run) {
                         checked
                             .entry(UVec3::new(x as u32, y as u32, z as u32))
-                            .or_insert_with(Face::from_top);
+                            .or_insert_with(Face::from_top)
+                            .set_top();
                     }
                     z_run += 1;
                 }
@@ -128,7 +132,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     x_run += 1;
                     checked
                         .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_insert_with(Face::from_bottom);
+                        .or_insert_with(Face::from_bottom)
+                        .set_bottom();
                 }
                 let mut z_run = 1;
                 'z_look: for z in (z + 1)..CHUNK_SIZE.size() {
@@ -143,7 +148,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     for x in x..(x + x_run) {
                         checked
                             .entry(UVec3::new(x as u32, y as u32, z as u32))
-                            .or_insert_with(Face::from_bottom);
+                            .or_insert_with(Face::from_bottom)
+                            .set_bottom();
                     }
                     z_run += 1;
                 }
@@ -155,9 +161,48 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             };
             current.set_bottom();
         }
-        if x == 0 || data.block(x - 1, y, z).is_transparent() {
-            m_block.add_face(&LEFT_FACE);
-        };
+        if !current.left() {
+            if x == 0 || data.block(x - 1, y, z).is_transparent() {
+                let mut z_run = 1;
+                for z in (z + 1)..CHUNK_SIZE.size() {
+                    if data.block(x, y, z) != block {
+                        break;
+                    }
+                    if x != 0 && !data.block(x - 1, y, z).is_transparent() {
+                        break;
+                    }
+                    z_run += 1;
+                    checked
+                        .entry(UVec3::new(x as u32, y as u32, z as u32))
+                        .or_insert_with(Face::from_left)
+                        .set_left();
+                }
+                let mut y_run = 1;
+                'y_look: for y in (y + 1)..CHUNK_SIZE.size() {
+                    for z in z..(z + z_run) {
+                        if data.block(x, y, z) != block {
+                            break 'y_look;
+                        }
+                        if x != 0 && !data.block(x - 1, y, z).is_transparent() {
+                            break 'y_look;
+                        }
+                    }
+                    for z in z..(z + z_run) {
+                        checked
+                            .entry(UVec3::new(x as u32, y as u32, z as u32))
+                            .or_insert_with(Face::from_left)
+                            .set_left();
+                    }
+                    y_run += 1;
+                }
+                if y_run > 1 || z_run > 1 {
+                    m_block.add_run(&LEFT_FACE, 1, y_run, z_run as u8);
+                } else {
+                    m_block.add_face(&LEFT_FACE);
+                }
+            };
+            current.set_left();
+        }
         if data.block(x + 1, y, z).is_transparent() {
             m_block.add_face(&RIGHT_FACE);
         };
@@ -175,7 +220,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             let x = p[0] + x as u32;
             let y = p[1] + y as u32;
             let z = p[2] + z as u32;
-            // positions_old.push([x as f32, y as f32, z as f32]);
+            #[cfg(feature = "standerd_position")]
+            positions_old.push([x as f32, y as f32, z as f32]);
             x | y << CHUNK_SIZE.bits_per_axis()
                 | z << (CHUNK_SIZE.bits_per_axis() * 2)
                 | (block.texture() as u32) << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
@@ -183,7 +229,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         }));
     }
     mesh.insert_attribute(crate::simple_shader::BLOCK_DATA, positions);
-    // mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_old);
+    #[cfg(feature = "standerd_position")]
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_old);
     mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
     mesh
 }

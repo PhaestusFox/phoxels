@@ -12,6 +12,11 @@ bitflags = "*"
 bytemuck = "*"
 phoxels = { path = "./phoxels", features = ["diagnostics"]}
 
+
+[features]
+default = []
+standerd_position = ["phoxels/standerd_position"]
+
 [workspace]
 members = ["./phoxels"]
 

@@ -11,6 +11,7 @@ indexmap = "*"
 default = ["log", "diagnostics"]
 log = ["bevy/bevy_log"]
 diagnostics = []
+standerd_position = []
 
 [dev-dependencies]
 criterion = { version = "0.6", features = ["html_reports"] }

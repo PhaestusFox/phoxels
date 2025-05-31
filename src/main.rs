@@ -24,16 +24,7 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
         bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
     ));
-    // app.insert_resource(WireframeConfig {
-    //     global: true,
-    //     ..Default::default()
-    // });
-    // app.add_plugins(WireframePlugin::default());
-    app.insert_resource(phoxels::prelude::GeneratorLimits {
-        max_generating_chunks: 100,
-        max_meshing_chunks: 100,
-    });
-    app.add_plugins(phoxels::PhoxelsPlugin);
+    app.add_plugins(phoxels_game::GamePlugin);
     // StandardMaterial
     // app.add_plugins(bevy_mod_debugdump::CommandLineArgs);
     // app.add_plugins(simple_shader::VoxelShaderPlugin);
