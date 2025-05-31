@@ -367,7 +367,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             };
             current.set_back();
         }
-
+        let id = data.texture(x, y, z);
         checked.insert(UVec3::new(x, y, z), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
         positions.extend(m_block.vertexs.iter().map(|p| {
@@ -379,7 +379,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             positions_old.push([x as f32, y as f32, z as f32]);
             x | y << CHUNK_SIZE.bits_per_axis()
                 | z << (CHUNK_SIZE.bits_per_axis() * 2)
-                | (data.texture(x, y, z) as u32) << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
+                | id << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
             // 9 bits left
         }));
     }

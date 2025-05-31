@@ -2,7 +2,7 @@
 /// bit 0: solid
 /// bit 1: opaque
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct BlockMeta(u8);
+pub struct BlockMeta(pub(crate) u8);
 
 impl BlockMeta {
     pub const EMPTY: BlockMeta = BlockMeta(0);
@@ -45,4 +45,11 @@ impl PartialEq<u8> for BlockId {
     fn eq(&self, other: &u8) -> bool {
         self.0 == *other
     }
+}
+
+#[test]
+fn empty_meta() {
+    let air = BlockMeta::EMPTY;
+    assert!(air.is_transparent());
+    assert!(!air.is_solid());
 }

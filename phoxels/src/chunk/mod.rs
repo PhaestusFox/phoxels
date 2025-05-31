@@ -52,7 +52,7 @@ impl ChunkSize {
     }
 }
 
-#[derive(bevy::prelude::Component, Clone)]
+#[derive(bevy::prelude::Component, Clone, Debug)]
 #[component(on_insert = ChunkData::on_insert, on_remove = ChunkData::on_remove)]
 #[require(Aabb = Aabb::from_min_max(
     Vec3::ZERO,
@@ -61,6 +61,7 @@ impl ChunkSize {
 pub struct ChunkData {
     blocks: Vec<BlockId>,
     block_meta: [BlockMeta; 256],
+    meta_fills: (u128, u128),
     size: UVec3,
     #[cfg(feature = "diagnostics")]
     count: usize,
@@ -70,6 +71,7 @@ impl ChunkData {
     pub fn empty() -> Self {
         ChunkData {
             blocks: vec![BlockId(0); CHUNK_SIZE.volume() as usize],
+            meta_fills: (0, 0),
             size: UVec3::splat(CHUNK_SIZE.size()),
             block_meta: [BlockMeta::EMPTY; 256],
             #[cfg(feature = "diagnostics")]
@@ -80,10 +82,16 @@ impl ChunkData {
     pub fn solid(block: impl Block) -> Self {
         let mut block_meta = [BlockMeta::EMPTY; 256];
         block_meta[block.id() as usize] = BlockMeta::from(block);
+        let meta_fills = if block.id() > 127 {
+            (1 << block.id() as usize, 0)
+        } else {
+            (0, 1 << (block.id() - 128) as usize)
+        };
         ChunkData {
             blocks: vec![BlockId(block.id()); CHUNK_SIZE.volume() as usize],
             size: UVec3::splat(CHUNK_SIZE.size()),
             block_meta,
+            meta_fills,
             #[cfg(feature = "diagnostics")]
             count: CHUNK_SIZE.volume() as usize,
         }
@@ -105,6 +113,9 @@ impl ChunkData {
             y,
             z
         );
+
+        self.add_meta(block);
+
         let block_id = block.id();
         #[cfg(feature = "diagnostics")]
         let meta = BlockMeta::from(block);
@@ -120,6 +131,23 @@ impl ChunkData {
         }
 
         self.set_block_unchecked(x, y, z, block_id);
+    }
+
+    #[inline(always)]
+    pub fn add_meta(&mut self, block: impl Block) {
+        let add = if block.id() < 128 {
+            self.meta_fills.0 & (1 << block.id())
+        } else {
+            self.meta_fills.1 & (1 << (block.id() - 128))
+        } == 0;
+        if add {
+            self.block_meta[block.id() as usize] = BlockMeta::from(block);
+            if block.id() < 128 {
+                self.meta_fills.0 |= 1 << block.id()
+            } else {
+                self.meta_fills.1 |= 1 << (block.id() - 128)
+            };
+        }
     }
 
     /// Get the block meta at the given coordinates
@@ -317,4 +345,26 @@ pub enum ChunkSets {
     /// Systems that run to generate ChunkMesh for ChunkData
     /// add a system.before() to update `ChunkMesher` priority order to generate meshes
     Mesh,
+}
+
+#[test]
+fn add_mesh_works() {
+    #[derive(Clone, Copy)]
+    struct TestBlock;
+    impl Block for TestBlock {
+        fn id(&self) -> u8 {
+            1
+        }
+        fn is_solid(&self) -> bool {
+            true
+        }
+        fn is_transparent(&self) -> bool {
+            false
+        }
+    }
+    let mut chunk = ChunkData::empty();
+    assert_eq!(chunk.block_meta, [BlockMeta::EMPTY; 256]);
+    assert_ne!(chunk.block_meta, [BlockMeta(1); 256]);
+    chunk.set_block(0, 0, 0, TestBlock);
+    assert_ne!(chunk.block_meta, [BlockMeta::EMPTY; 256]);
 }

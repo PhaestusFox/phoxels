@@ -29,7 +29,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 100;
+const MAP_SIZE: i32 = 10;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<BlockDescriptor>();
