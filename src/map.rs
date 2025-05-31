@@ -10,7 +10,11 @@ use bevy::{
 };
 use indexmap::IndexMap;
 use noise::{Fbm, MultiFractal, NoiseFn, SuperSimplex};
-use phoxels::core::{BlockMeta, BlockOverride, BlockOverrides, PhoxelGenerator};
+use phoxels::core::{
+    BlockMeta, BlockOverride, BlockOverrides, PhoxelGenerator, PhoxelGeneratorData,
+};
+
+pub type GeneratorDataType = ChunkId;
 
 use crate::{
     diganostics::VoxelCount,
@@ -36,47 +40,41 @@ pub fn plugin(app: &mut App) {
     let map_descriptor = MapDescriptor::from_world(app.world_mut());
     app.insert_resource(map_descriptor.clone());
     let var = std::sync::Mutex::new(phoxels::utils::BlockIter::<201>::new());
-    app.insert_resource(phoxels::prelude::PhoxelGenerator::new(move || {
-        let mut chunk = phoxels::prelude::ChunkData::empty();
-        let map_descriptor = map_descriptor.read().unwrap();
-        let (x, y, z) = var
-            .lock()
-            .unwrap()
-            .next()
-            .expect("more itrations than 201*201");
-        if y != 0 {
-            panic!()
-        }
-        let id = IVec3::new(x as i32, y as i32, z as i32);
-        for x in 0..CHUNK_SIZE as usize {
-            for z in 0..CHUNK_SIZE as usize {
-                let h = map_descriptor
-                    .get_height(x as i32 + id.x * CHUNK_SIZE, z as i32 + id.z * CHUNK_SIZE);
-                for y in (id.y * CHUNK_SIZE)..(id.y + 1) * CHUNK_SIZE {
-                    if y > h {
-                        if x == 1 && z == 1 {
-                            chunk.set_block(
-                                x,
-                                (y - id.y * CHUNK_SIZE) as usize,
-                                z,
-                                BlockType::Furnuse,
-                            );
+    app.insert_resource(phoxels::prelude::PhoxelGenerator::new(
+        move |id: GeneratorDataType| {
+            let mut chunk = phoxels::prelude::ChunkData::empty();
+            let map_descriptor = map_descriptor.read().unwrap();
+            // let (id, _) = id;
+            for x in 0..CHUNK_SIZE as usize {
+                for z in 0..CHUNK_SIZE as usize {
+                    let h = map_descriptor
+                        .get_height(x as i32 + id.x * CHUNK_SIZE, z as i32 + id.z * CHUNK_SIZE);
+                    for y in (id.y * CHUNK_SIZE)..(id.y + 1) * CHUNK_SIZE {
+                        if y > h {
+                            if x == 1 && z == 1 {
+                                chunk.set_block(
+                                    x,
+                                    (y - id.y * CHUNK_SIZE) as usize,
+                                    z,
+                                    BlockType::Furnuse,
+                                );
+                            }
+                            break;
                         }
-                        break;
+                        let block = if y == h {
+                            BlockType::Grass
+                        } else if y + 3 > h {
+                            BlockType::Dirt
+                        } else {
+                            BlockType::Stone
+                        };
+                        chunk.set_block(x, (y - id.y * CHUNK_SIZE) as usize, z, block);
                     }
-                    let block = if y == h {
-                        BlockType::Grass
-                    } else if y + 3 > h {
-                        BlockType::Dirt
-                    } else {
-                        BlockType::Stone
-                    };
-                    chunk.set_block(x, (y - id.y * CHUNK_SIZE) as usize, z, block);
                 }
             }
-        }
-        chunk
-    }));
+            chunk
+        },
+    ));
 }
 
 // fn sort_gen_order(mut chunks: ResMut<phoxels::ChunkMesher>) {
@@ -103,11 +101,12 @@ pub fn plugin(app: &mut App) {
 //     })
 // }
 
-#[derive(Component, PartialEq, Eq, Hash, Clone, Copy, Deref)]
+#[derive(Debug, Component, PartialEq, Eq, Hash, Clone, Copy, Deref, Default, Reflect)]
 #[component(immutable, on_insert = ChunkId::on_add)]
 #[require(Transform, Visibility)]
-struct ChunkId(IVec3);
+pub struct ChunkId(IVec3);
 
+//Send + Sync + Clone + QueryData + FromReflect + GetTypeRegistration + Bundle + Reflect
 impl ChunkId {
     pub fn new(x: i32, y: i32, z: i32) -> Self {
         ChunkId(IVec3::new(x, y, z))
@@ -178,7 +177,7 @@ fn spawn_world(
     mut commands: Commands,
     block_data: Res<BlockDescriptor>,
     asset_server: Res<AssetServer>,
-    generator: Res<PhoxelGenerator>,
+    generator: Res<PhoxelGenerator<GeneratorDataType>>,
 ) {
     // map_descriptor.min_max_y();
     commands.spawn((
@@ -192,8 +191,9 @@ fn spawn_world(
         for x in -MAP_SIZE..=MAP_SIZE {
             commands.spawn((
                 ChunkId::new(x, 0, z),
-                Transform::from_scale(Vec3::splat(0.5)),
+                // Transform::from_scale(Vec3::splat(0.5)),
                 MeshMaterial3d(block_data.material()),
+                Mesh3d(Default::default()),
                 generator.clone(),
             ));
         }

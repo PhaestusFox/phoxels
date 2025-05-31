@@ -6,9 +6,9 @@
 - [x] add per-block face overrides
 - [-] add basic greedy meshing
 - [] add collider generatior
-- [] look into using generic as input for PhoxelGenerator fn
-  - [] use generic in start generation to get data to pass to PhoxelGenerator
-  - [] log an error if entity does not have generating component but have PhoxelGenerator?
+- [x] look into using generic as input for PhoxelGenerator fn
+  - [x] use generic in start generation to get data to pass to PhoxelGenerator
+  - [x] log an error if entity does not have generating component but have PhoxelGenerator?
   - [] make PhoxelGenerator generic a required component for PhoxelGenerator
 - [] allow dynamic chunk size
 - [-] work out if can add whole mesh attribute rather then per vertex

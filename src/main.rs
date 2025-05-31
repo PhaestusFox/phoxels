@@ -4,10 +4,7 @@ use bevy::{
     prelude::*,
 };
 
-mod diganostics;
-mod map;
-mod player;
-mod shader;
+use phoxels_game::*;
 // mod simple_shader;
 
 fn main() {

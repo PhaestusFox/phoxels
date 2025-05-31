@@ -4,6 +4,7 @@ mod simple_shader;
 
 pub mod core {
     pub use crate::block::BlockMeta;
+    pub use crate::chunk::manager::PhoxelGeneratorData;
     pub use crate::prelude::*;
 }
 
@@ -29,16 +30,31 @@ pub mod prelude {
 
 pub mod utils;
 
+use core::PhoxelGeneratorData;
+use std::marker::PhantomData;
+
 pub use crate::chunk::manager::{ChunkGenerator, ChunkMesher};
 
-use bevy::prelude::{App, Plugin};
+use bevy::{
+    ecs::component::Component,
+    prelude::{App, Plugin},
+};
 
-pub struct PhoxelsPlugin;
+pub struct PhoxelsPlugin<T: PhoxelGeneratorData = ()>(PhantomData<T>);
 
-impl Plugin for PhoxelsPlugin {
+impl<T: PhoxelGeneratorData> Plugin for PhoxelsPlugin<T> {
     fn build(&self, app: &mut App) {
-        app.add_plugins((chunk::ChunkPlugin, simple_shader::VoxelShaderPlugin));
+        app.add_plugins((
+            chunk::ChunkPlugin::<T>::default(),
+            simple_shader::VoxelShaderPlugin,
+        ));
         #[cfg(feature = "diagnostics")]
         app.add_plugins(diagnostics::PhoxelDiagnostics);
+    }
+}
+
+impl<T: PhoxelGeneratorData> Default for PhoxelsPlugin<T> {
+    fn default() -> Self {
+        PhoxelsPlugin(PhantomData)
     }
 }

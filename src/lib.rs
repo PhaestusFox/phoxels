@@ -2,6 +2,11 @@ use bevy::{
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
 };
+pub mod diganostics;
+pub mod map;
+pub mod player;
+pub mod shader;
+use map::ChunkId;
 
 pub struct GamePlugin;
 
@@ -18,6 +23,6 @@ impl Plugin for GamePlugin {
             max_generating_chunks: 100,
             max_meshing_chunks: 100,
         });
-        app.add_plugins(phoxels::PhoxelsPlugin);
+        app.add_plugins(phoxels::PhoxelsPlugin::<map::GeneratorDataType>::default());
     }
 }

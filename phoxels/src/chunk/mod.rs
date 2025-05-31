@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::core::*;
 use bevy::{
     app::{App, Plugin, Update},
@@ -234,9 +236,15 @@ pub(crate) mod mesh_gen;
 //     }
 // }
 
-pub struct ChunkPlugin;
+pub struct ChunkPlugin<T: PhoxelGeneratorData = ()>(PhantomData<T>);
 
-impl Plugin for ChunkPlugin {
+impl<T: PhoxelGeneratorData> Default for ChunkPlugin<T> {
+    fn default() -> Self {
+        ChunkPlugin(PhantomData::default())
+    }
+}
+
+impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
     fn build(&self, app: &mut App) {
         app.init_resource::<ChunkGenerator>()
             .init_resource::<ChunkMesher>()
@@ -253,7 +261,7 @@ impl Plugin for ChunkPlugin {
             Update,
             (
                 manager::extract_finished_chunk_data,
-                manager::start_generating_chunk_data,
+                manager::start_generating_chunk_data::<T>,
             )
                 .chain()
                 .in_set(ChunkSets::Generate),
