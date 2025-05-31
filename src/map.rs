@@ -29,8 +29,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 10;
-const TASK_MULT: usize = 10;
+const MAP_SIZE: i32 = 100;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<BlockDescriptor>();
@@ -187,6 +186,15 @@ fn spawn_world(
     commands.spawn((Mesh3d(
         asset_server.add(Cuboid::from_size(Vec3::ONE * 2.).into()),
     ),));
+    if MAP_SIZE == 0 {
+        commands.spawn((
+            MeshMaterial3d(block_data.material()),
+            ChunkId::new(-1, 0, -1),
+            generator.clone(),
+        ));
+        return;
+    }
+
     for z in -MAP_SIZE..=MAP_SIZE {
         for x in -MAP_SIZE..=MAP_SIZE {
             commands.spawn((

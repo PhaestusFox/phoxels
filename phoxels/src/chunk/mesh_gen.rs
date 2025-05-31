@@ -87,11 +87,14 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if !data.block(x, y + 1, z).is_transparent() {
                         break;
                     }
-                    x_run += 1;
-                    checked
+                    let other = checked
                         .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_insert_with(Face::from_top)
-                        .set_top();
+                        .or_default();
+                    if other.top() {
+                        break; // Already checked
+                    }
+                    x_run += 1;
+                    other.set_top();
                 }
                 let mut z_run = 1;
                 'z_loop: for z in (z + 1)..CHUNK_SIZE.size() {
@@ -101,6 +104,12 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                         }
                         if !data.block(x, y + 1, z).is_transparent() {
                             break 'z_loop;
+                        }
+                        if checked
+                            .get(&UVec3::new(x as u32, y as u32, z as u32))
+                            .is_some_and(|f| f.top())
+                        {
+                            break 'z_loop; // Already checked
                         }
                     }
                     for x in x..(x + x_run) {
@@ -129,11 +138,14 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     if y != 0 && !data.block(x, y - 1, z).is_transparent() {
                         break;
                     }
-                    x_run += 1;
-                    checked
+                    let other = checked
                         .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_insert_with(Face::from_bottom)
-                        .set_bottom();
+                        .or_default();
+                    if other.bottom() {
+                        break; // Already checked
+                    }
+                    x_run += 1;
+                    other.set_bottom();
                 }
                 let mut z_run = 1;
                 'z_look: for z in (z + 1)..CHUNK_SIZE.size() {
@@ -143,6 +155,12 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                         }
                         if y != 0 && !data.block(x, y - 1, z).is_transparent() {
                             break 'z_look;
+                        }
+                        if checked
+                            .get(&UVec3::new(x as u32, y as u32, z as u32))
+                            .is_some_and(|f| f.bottom())
+                        {
+                            break 'z_look; // Already checked
                         }
                     }
                     for x in x..(x + x_run) {
@@ -164,32 +182,41 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.left() {
             if x == 0 || data.block(x - 1, y, z).is_transparent() {
                 let mut z_run = 1;
-                for z in (z + 1)..CHUNK_SIZE.size() {
-                    if data.block(x, y, z) != block {
+                for nz in (z + 1)..CHUNK_SIZE.size() {
+                    if data.block(x, y, nz) != block {
                         break;
                     }
-                    if x != 0 && !data.block(x - 1, y, z).is_transparent() {
+                    if x != 0 && !data.block(x - 1, y, nz).is_transparent() {
                         break;
+                    }
+                    let other = checked
+                        .entry(UVec3::new(x as u32, y as u32, nz as u32))
+                        .or_default();
+                    if other.left() {
+                        break; // Already checked
                     }
                     z_run += 1;
-                    checked
-                        .entry(UVec3::new(x as u32, y as u32, z as u32))
-                        .or_insert_with(Face::from_left)
-                        .set_left();
+                    other.set_left();
                 }
                 let mut y_run = 1;
-                'y_look: for y in (y + 1)..CHUNK_SIZE.size() {
-                    for z in z..(z + z_run) {
-                        if data.block(x, y, z) != block {
+                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                    for nz in z..(z + z_run) {
+                        if data.block(x, ny, nz) != block {
                             break 'y_look;
                         }
-                        if x != 0 && !data.block(x - 1, y, z).is_transparent() {
+                        if x != 0 && !data.block(x - 1, ny, nz).is_transparent() {
                             break 'y_look;
+                        }
+                        if checked
+                            .get(&UVec3::new(x as u32, ny as u32, nz as u32))
+                            .is_some_and(|f| f.left())
+                        {
+                            break 'y_look; // Already checked
                         }
                     }
-                    for z in z..(z + z_run) {
+                    for nz in z..(z + z_run) {
                         checked
-                            .entry(UVec3::new(x as u32, y as u32, z as u32))
+                            .entry(UVec3::new(x as u32, ny as u32, nz as u32))
                             .or_insert_with(Face::from_left)
                             .set_left();
                     }
@@ -203,15 +230,159 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             };
             current.set_left();
         }
-        if data.block(x + 1, y, z).is_transparent() {
-            m_block.add_face(&RIGHT_FACE);
-        };
-        if z == 0 || data.block(x, y, z - 1).is_transparent() {
-            m_block.add_face(&FRONT_FACE);
-        };
-        if data.block(x, y, z + 1).is_transparent() {
-            m_block.add_face(&BACK_FACE);
-        };
+        if !current.right() {
+            if data.block(x + 1, y, z).is_transparent() {
+                let mut z_run = 1;
+                for nz in (z + 1)..CHUNK_SIZE.size() {
+                    if data.block(x, y, nz) != block {
+                        break;
+                    }
+                    if !data.block(x + 1, y, nz).is_transparent() {
+                        break;
+                    }
+                    let other = checked
+                        .entry(UVec3::new(x as u32, y as u32, nz as u32))
+                        .or_default();
+                    if other.right() {
+                        break; // Already checked
+                    }
+                    z_run += 1;
+                    other.set_right();
+                }
+                let mut y_run = 1;
+                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                    for nz in z..(z + z_run) {
+                        if data.block(x, ny, nz) != block {
+                            break 'y_look;
+                        }
+                        if !data.block(x + 1, ny, nz).is_transparent() {
+                            break 'y_look;
+                        }
+                        if checked
+                            .get(&UVec3::new(x as u32, ny as u32, nz as u32))
+                            .is_some_and(|f| f.right())
+                        {
+                            break 'y_look; // Already checked
+                        }
+                    }
+                    for nz in z..(z + z_run) {
+                        checked
+                            .entry(UVec3::new(x as u32, ny as u32, nz as u32))
+                            .or_insert_with(Face::from_right)
+                            .set_right();
+                    }
+                    y_run += 1;
+                }
+                if y_run > 1 || z_run > 1 {
+                    m_block.add_run(&RIGHT_FACE, 1, y_run, z_run as u8);
+                } else {
+                    m_block.add_face(&RIGHT_FACE);
+                }
+            }
+            current.set_right();
+        }
+        if !current.front() {
+            if z == 0 || data.block(x, y, z - 1).is_transparent() {
+                let mut x_run = 1;
+                for nx in (x + 1)..CHUNK_SIZE.size() {
+                    if data.block(nx, y, z) != block {
+                        break;
+                    }
+                    if z != 0 && !data.block(nx, y, z - 1).is_transparent() {
+                        break;
+                    }
+                    let other = checked
+                        .entry(UVec3::new(nx as u32, y as u32, z as u32))
+                        .or_default();
+                    if other.front() {
+                        break; // Already checked
+                    }
+                    x_run += 1;
+                    other.set_front();
+                }
+                let mut y_run = 1;
+                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                    for nx in x..(x + x_run) {
+                        if data.block(nx, ny, z) != block {
+                            break 'y_look;
+                        }
+                        if z != 0 && !data.block(nx, ny, z - 1).is_transparent() {
+                            break 'y_look;
+                        }
+                        if checked
+                            .get(&UVec3::new(nx as u32, ny as u32, z as u32))
+                            .is_some_and(|f| f.front())
+                        {
+                            break 'y_look; // Already checked
+                        }
+                    }
+                    for nx in x..(x + x_run) {
+                        checked
+                            .entry(UVec3::new(nx as u32, ny as u32, z as u32))
+                            .or_insert_with(Face::from_front)
+                            .set_front();
+                    }
+                    y_run += 1;
+                }
+                if y_run > 1 || x_run > 1 {
+                    m_block.add_run(&FRONT_FACE, x_run as u8, y_run, 1);
+                } else {
+                    m_block.add_face(&FRONT_FACE);
+                }
+            };
+            current.set_front();
+        }
+        if !current.back() {
+            if data.block(x, y, z + 1).is_transparent() {
+                let mut x_run = 1;
+                for nx in (x + 1)..CHUNK_SIZE.size() {
+                    if data.block(nx, y, z) != block {
+                        break;
+                    }
+                    if !data.block(nx, y, z + 1).is_transparent() {
+                        break;
+                    }
+                    let other = checked
+                        .entry(UVec3::new(nx as u32, y as u32, z as u32))
+                        .or_default();
+                    if other.back() {
+                        break; // Already checked
+                    }
+                    x_run += 1;
+                    other.set_back();
+                }
+                let mut y_run = 1;
+                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                    for nx in x..(x + x_run) {
+                        if data.block(nx, ny, z) != block {
+                            break 'y_look;
+                        }
+                        if !data.block(nx, ny, z + 1).is_transparent() {
+                            break 'y_look;
+                        }
+                        if checked
+                            .get(&UVec3::new(nx as u32, ny as u32, z as u32))
+                            .is_some_and(|f| f.back())
+                        {
+                            break 'y_look; // Already checked
+                        }
+                    }
+                    for nx in x..(x + x_run) {
+                        checked
+                            .entry(UVec3::new(nx as u32, ny as u32, z as u32))
+                            .or_insert_with(Face::from_back)
+                            .set_back();
+                    }
+                    y_run += 1;
+                }
+                if y_run > 1 || x_run > 1 {
+                    m_block.add_run(&BACK_FACE, x_run as u8, y_run, 1);
+                } else {
+                    m_block.add_face(&BACK_FACE);
+                }
+            };
+            current.set_back();
+        }
 
         checked.insert(UVec3::new(x as u32, y as u32, z as u32), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
@@ -237,6 +408,31 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
 
 #[derive(Default)]
 struct Face(u8);
+
+impl std::fmt::Display for Face {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut s = String::new();
+        if self.top() {
+            s.push('T');
+        }
+        if self.bottom() {
+            s.push('B');
+        }
+        if self.left() {
+            s.push('L');
+        }
+        if self.right() {
+            s.push('R');
+        }
+        if self.back() {
+            s.push('K');
+        }
+        if self.front() {
+            s.push('F');
+        }
+        write!(f, "Face({})", s)
+    }
+}
 
 impl Face {
     fn top(&self) -> bool {
@@ -374,7 +570,7 @@ impl Vertex {
             Vertex::LeftTopFront => [0, y_run as u32, 0],
             Vertex::RightBottomBack => [x_run as u32, 0, z_run as u32],
             Vertex::LeftBottomBack => [0, 0, z_run as u32],
-            Vertex::RightBottomFront => [z_run as u32, 0, 0],
+            Vertex::RightBottomFront => [x_run as u32, 0, 0],
         }
     }
 }
