@@ -19,6 +19,7 @@ mod diagnostics;
 pub mod prelude {
     pub use crate::PhoxelsPlugin;
     pub use crate::block::Block;
+    pub use crate::block::BlockId;
     pub use crate::chunk::ChunkData;
     pub use crate::chunk::ChunkSets;
     pub use crate::chunk::GeneratorLimits;

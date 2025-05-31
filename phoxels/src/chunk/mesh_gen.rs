@@ -66,7 +66,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
     let mut checked = bevy::platform::collections::HashMap::new();
     // let UVec3 { x, y, z } = data.size;
     for (x, y, z) in DynBlockIter::new(data.size) {
-        let block = data.block(x, y, z);
+        let block = data.block_meta(x, y, z);
         if block == BlockMeta::EMPTY {
             continue;
         }
@@ -77,13 +77,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         let mut m_block = VertexSet::default();
 
         if !current.top() {
-            if data.block(x, y + 1, z).is_transparent() {
+            if data.block_meta(x, y + 1, z).is_transparent() {
                 let mut x_run = 1;
                 for x in (x + 1)..data.size.x {
-                    if data.block(x, y, z) != block {
+                    if data.block_meta(x, y, z) != block {
                         break;
                     }
-                    if !data.block(x, y + 1, z).is_transparent() {
+                    if !data.block_meta(x, y + 1, z).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(x, y, z)).or_default();
@@ -96,10 +96,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut z_run = 1;
                 'z_loop: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
-                        if data.block(x, y, z) != block {
+                        if data.block_meta(x, y, z) != block {
                             break 'z_loop;
                         }
-                        if !data.block(x, y + 1, z).is_transparent() {
+                        if !data.block_meta(x, y + 1, z).is_transparent() {
                             break 'z_loop;
                         }
                         if checked.get(&UVec3::new(x, y, z)).is_some_and(|f| f.top()) {
@@ -123,13 +123,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_top();
         }
         if !current.bottom() {
-            if y == 0 || data.block(x, y - 1, z).is_transparent() {
+            if y == 0 || data.block_meta(x, y - 1, z).is_transparent() {
                 let mut x_run = 1;
                 for x in (x + 1)..data.size.x {
-                    if data.block(x, y, z) != block {
+                    if data.block_meta(x, y, z) != block {
                         break;
                     }
-                    if y != 0 && !data.block(x, y - 1, z).is_transparent() {
+                    if y != 0 && !data.block_meta(x, y - 1, z).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(x, y, z)).or_default();
@@ -142,10 +142,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut z_run = 1;
                 'z_look: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
-                        if data.block(x, y, z) != block {
+                        if data.block_meta(x, y, z) != block {
                             break 'z_look;
                         }
-                        if y != 0 && !data.block(x, y - 1, z).is_transparent() {
+                        if y != 0 && !data.block_meta(x, y - 1, z).is_transparent() {
                             break 'z_look;
                         }
                         if checked
@@ -172,13 +172,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_bottom();
         }
         if !current.left() {
-            if x == 0 || data.block(x - 1, y, z).is_transparent() {
+            if x == 0 || data.block_meta(x - 1, y, z).is_transparent() {
                 let mut z_run = 1;
                 for nz in (z + 1)..data.size.z {
-                    if data.block(x, y, nz) != block {
+                    if data.block_meta(x, y, nz) != block {
                         break;
                     }
-                    if x != 0 && !data.block(x - 1, y, nz).is_transparent() {
+                    if x != 0 && !data.block_meta(x - 1, y, nz).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(x, y, nz)).or_default();
@@ -191,10 +191,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
-                        if data.block(x, ny, nz) != block {
+                        if data.block_meta(x, ny, nz) != block {
                             break 'y_look;
                         }
-                        if x != 0 && !data.block(x - 1, ny, nz).is_transparent() {
+                        if x != 0 && !data.block_meta(x - 1, ny, nz).is_transparent() {
                             break 'y_look;
                         }
                         if checked
@@ -221,13 +221,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_left();
         }
         if !current.right() {
-            if data.block(x + 1, y, z).is_transparent() {
+            if data.block_meta(x + 1, y, z).is_transparent() {
                 let mut z_run = 1;
                 for nz in (z + 1)..data.size.z {
-                    if data.block(x, y, nz) != block {
+                    if data.block_meta(x, y, nz) != block {
                         break;
                     }
-                    if !data.block(x + 1, y, nz).is_transparent() {
+                    if !data.block_meta(x + 1, y, nz).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(x, y, nz)).or_default();
@@ -240,10 +240,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
-                        if data.block(x, ny, nz) != block {
+                        if data.block_meta(x, ny, nz) != block {
                             break 'y_look;
                         }
-                        if !data.block(x + 1, ny, nz).is_transparent() {
+                        if !data.block_meta(x + 1, ny, nz).is_transparent() {
                             break 'y_look;
                         }
                         if checked
@@ -270,13 +270,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_right();
         }
         if !current.front() {
-            if z == 0 || data.block(x, y, z - 1).is_transparent() {
+            if z == 0 || data.block_meta(x, y, z - 1).is_transparent() {
                 let mut x_run = 1;
                 for nx in (x + 1)..data.size.x {
-                    if data.block(nx, y, z) != block {
+                    if data.block_meta(nx, y, z) != block {
                         break;
                     }
-                    if z != 0 && !data.block(nx, y, z - 1).is_transparent() {
+                    if z != 0 && !data.block_meta(nx, y, z - 1).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(nx, y, z)).or_default();
@@ -289,10 +289,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
-                        if data.block(nx, ny, z) != block {
+                        if data.block_meta(nx, ny, z) != block {
                             break 'y_look;
                         }
-                        if z != 0 && !data.block(nx, ny, z - 1).is_transparent() {
+                        if z != 0 && !data.block_meta(nx, ny, z - 1).is_transparent() {
                             break 'y_look;
                         }
                         if checked
@@ -319,13 +319,13 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_front();
         }
         if !current.back() {
-            if data.block(x, y, z + 1).is_transparent() {
+            if data.block_meta(x, y, z + 1).is_transparent() {
                 let mut x_run = 1;
                 for nx in (x + 1)..data.size.x {
-                    if data.block(nx, y, z) != block {
+                    if data.block_meta(nx, y, z) != block {
                         break;
                     }
-                    if !data.block(nx, y, z + 1).is_transparent() {
+                    if !data.block_meta(nx, y, z + 1).is_transparent() {
                         break;
                     }
                     let other = checked.entry(UVec3::new(nx, y, z)).or_default();
@@ -338,10 +338,10 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
-                        if data.block(nx, ny, z) != block {
+                        if data.block_meta(nx, ny, z) != block {
                             break 'y_look;
                         }
-                        if !data.block(nx, ny, z + 1).is_transparent() {
+                        if !data.block_meta(nx, ny, z + 1).is_transparent() {
                             break 'y_look;
                         }
                         if checked
@@ -379,7 +379,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             positions_old.push([x as f32, y as f32, z as f32]);
             x | y << CHUNK_SIZE.bits_per_axis()
                 | z << (CHUNK_SIZE.bits_per_axis() * 2)
-                | (block.texture() as u32) << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
+                | (data.texture(x, y, z) as u32) << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
             // 9 bits left
         }));
     }

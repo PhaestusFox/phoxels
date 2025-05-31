@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::core::*;
+use crate::{block::BlockId, core::*};
 use bevy::{
     app::{App, Plugin, Update},
+    color::palettes::css::BLACK,
     ecs::schedule::IntoScheduleConfigs,
     math::UVec3,
     prelude::Vec3,
@@ -58,7 +59,8 @@ impl ChunkSize {
     Vec3::ONE * CHUNK_SIZE.size() as f32,
 ))]
 pub struct ChunkData {
-    blocks: Vec<BlockMeta>,
+    blocks: Vec<BlockId>,
+    block_meta: [BlockMeta; 256],
     size: UVec3,
     #[cfg(feature = "diagnostics")]
     count: usize,
@@ -67,43 +69,48 @@ pub struct ChunkData {
 impl ChunkData {
     pub fn empty() -> Self {
         ChunkData {
-            blocks: vec![BlockMeta::default(); CHUNK_SIZE.volume() as usize],
+            blocks: vec![BlockId(0); CHUNK_SIZE.volume() as usize],
             size: UVec3::splat(CHUNK_SIZE.size()),
+            block_meta: [BlockMeta::EMPTY; 256],
             #[cfg(feature = "diagnostics")]
             count: 0,
         }
     }
 
     pub fn solid(block: impl Block) -> Self {
+        let mut block_meta = [BlockMeta::EMPTY; 256];
+        block_meta[block.id() as usize] = BlockMeta::from(block);
         ChunkData {
-            blocks: vec![block.into(); CHUNK_SIZE.volume() as usize],
+            blocks: vec![BlockId(block.id()); CHUNK_SIZE.volume() as usize],
             size: UVec3::splat(CHUNK_SIZE.size()),
+            block_meta,
             #[cfg(feature = "diagnostics")]
             count: CHUNK_SIZE.volume() as usize,
         }
     }
 
     #[inline(always)]
-    fn set_block_unchecked(&mut self, x: u32, y: u32, z: u32, block: impl Into<BlockMeta>) {
-        let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-        self.blocks[index as usize] = block.into();
+    fn set_block_unchecked(&mut self, x: u32, y: u32, z: u32, block: u8) {
+        let index = self.get_index(x, y, z);
+        self.blocks[index] = BlockId(block);
     }
 
     /// Set the block at the given coordinates
     /// Panics if the coordinates are out of bounds
-    pub fn set_block(&mut self, x: u32, y: u32, z: u32, block: impl Into<BlockMeta>) {
+    pub fn set_block(&mut self, x: u32, y: u32, z: u32, block: impl Block) {
         debug_assert!(
-            x < CHUNK_SIZE.size() && y < CHUNK_SIZE.size() && z < CHUNK_SIZE.size(),
+            x < self.size.x && y < self.size.y && z < self.size.z,
             "block index out of bounds: ({}, {}, {})",
             x,
             y,
             z
         );
+        let block_id = block.id();
         #[cfg(feature = "diagnostics")]
-        let block = block.into();
+        let meta = BlockMeta::from(block);
         #[cfg(feature = "diagnostics")]
-        if self.blocks[(x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria()) as usize] != block {
-            if block == BlockMeta::EMPTY {
+        if self.blocks[self.get_index(x, y, z)] != block_id {
+            if meta == BlockMeta::EMPTY {
                 self.count -= 1;
             } else {
                 self.count += 1;
@@ -112,32 +119,49 @@ impl ChunkData {
             return;
         }
 
-        self.set_block_unchecked(x, y, z, block);
+        self.set_block_unchecked(x, y, z, block_id);
     }
 
     /// Get the block meta at the given coordinates
     /// Returns None if out of bounds
     #[inline(always)]
     pub fn get_block_meta(&self, x: u32, y: u32, z: u32) -> Option<BlockMeta> {
-        if x < CHUNK_SIZE.size() && y < CHUNK_SIZE.size() && z < CHUNK_SIZE.size() {
-            let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
-            Some(self.blocks[index as usize])
-        } else {
-            None
-        }
+        self.block_meta
+            .get(self.get_block_id(x, y, z)?.0 as usize)
+            .copied()
     }
 
     /// Get the block at the given coordinates
     /// return BlockMeta::EMPTY if out of bounds
     #[inline(always)]
-    pub fn block(&self, x: u32, y: u32, z: u32) -> BlockMeta {
+    pub fn block_meta(&self, x: u32, y: u32, z: u32) -> BlockMeta {
         self.get_block_meta(x, y, z).unwrap_or(BlockMeta::EMPTY)
     }
 
-    /// Get the block at the given coordinates and convert it to the specified type
-    pub fn get_block<T: From<BlockMeta>>(&self, x: u32, y: u32, z: u32) -> Option<T> {
-        let block_meta = self.get_block_meta(x, y, z)?;
-        Some(T::from(block_meta))
+    pub fn get_block_id(&self, x: u32, y: u32, z: u32) -> Option<BlockId> {
+        if self.in_bounds(x, y, z) {
+            Some(self.blocks[self.get_index(x, y, z)])
+        } else {
+            None
+        }
+    }
+
+    pub fn texture(&self, x: u32, y: u32, z: u32) -> u32 {
+        if self.in_bounds(x, y, z) {
+            self.blocks[self.get_index(x, y, z)].0 as u32
+        } else {
+            0
+        }
+    }
+
+    #[inline(always)]
+    pub fn in_bounds(&self, x: u32, y: u32, z: u32) -> bool {
+        x < self.size.x && y < self.size.y && z < self.size.z
+    }
+
+    #[inline(always)]
+    pub fn get_index(&self, x: u32, y: u32, z: u32) -> usize {
+        (y * self.size.z * self.size.x + z * self.size.x + x) as usize
     }
 
     #[inline(always)]
@@ -185,7 +209,7 @@ impl ChunkData {
     fn update_count(&mut self) {
         let mut filled = 0;
         for block in self.blocks.iter() {
-            if *block != BlockMeta::EMPTY {
+            if self.block_meta[block.0 as usize] != BlockMeta::EMPTY {
                 filled += 1;
             }
         }
