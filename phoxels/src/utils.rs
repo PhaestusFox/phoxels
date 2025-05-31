@@ -61,7 +61,7 @@ impl DynBlockIter {
 
 impl Default for DynBlockIter {
     fn default() -> Self {
-        Self::new(UVec3::splat(CHUNK_SIZE.size() as u32))
+        Self::new(UVec3::splat(CHUNK_SIZE.size()))
     }
 }
 

@@ -68,7 +68,7 @@ impl ChunkData {
     pub fn empty() -> Self {
         ChunkData {
             blocks: vec![BlockMeta::default(); CHUNK_SIZE.volume() as usize],
-            size: UVec3::splat(CHUNK_SIZE.size() as u32),
+            size: UVec3::splat(CHUNK_SIZE.size()),
             #[cfg(feature = "diagnostics")]
             count: 0,
         }
@@ -77,7 +77,7 @@ impl ChunkData {
     pub fn solid(block: impl Block) -> Self {
         ChunkData {
             blocks: vec![block.into(); CHUNK_SIZE.volume() as usize],
-            size: UVec3::splat(CHUNK_SIZE.size() as u32),
+            size: UVec3::splat(CHUNK_SIZE.size()),
             #[cfg(feature = "diagnostics")]
             count: CHUNK_SIZE.volume() as usize,
         }

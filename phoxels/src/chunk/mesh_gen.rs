@@ -3,7 +3,7 @@ use bevy::{asset::RenderAssetUsages, render::mesh::Mesh};
 
 use super::{CHUNK_SIZE, ChunkData};
 use crate::core::BlockMeta;
-use crate::utils::{BlockIter, DynBlockIter};
+use crate::utils::DynBlockIter;
 
 // Back face
 const BACK_FACE: [Vertex; 4] = [
@@ -65,9 +65,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
     let mut indices = Vec::new();
     let mut checked = bevy::platform::collections::HashMap::new();
     // let UVec3 { x, y, z } = data.size;
-    for (x, y, z) in
-        BlockIter::<{ CHUNK_SIZE.size() }, { CHUNK_SIZE.size() }, { CHUNK_SIZE.size() }>::new()
-    {
+    for (x, y, z) in DynBlockIter::new(data.size) {
         let block = data.block(x, y, z);
         if block == BlockMeta::EMPTY {
             continue;
@@ -81,7 +79,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.top() {
             if data.block(x, y + 1, z).is_transparent() {
                 let mut x_run = 1;
-                for x in (x + 1)..CHUNK_SIZE.size() {
+                for x in (x + 1)..data.size.x {
                     if data.block(x, y, z) != block {
                         break;
                     }
@@ -96,7 +94,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_top();
                 }
                 let mut z_run = 1;
-                'z_loop: for z in (z + 1)..CHUNK_SIZE.size() {
+                'z_loop: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
                         if data.block(x, y, z) != block {
                             break 'z_loop;
@@ -127,7 +125,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.bottom() {
             if y == 0 || data.block(x, y - 1, z).is_transparent() {
                 let mut x_run = 1;
-                for x in (x + 1)..CHUNK_SIZE.size() {
+                for x in (x + 1)..data.size.x {
                     if data.block(x, y, z) != block {
                         break;
                     }
@@ -142,7 +140,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_bottom();
                 }
                 let mut z_run = 1;
-                'z_look: for z in (z + 1)..CHUNK_SIZE.size() {
+                'z_look: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
                         if data.block(x, y, z) != block {
                             break 'z_look;
@@ -176,7 +174,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.left() {
             if x == 0 || data.block(x - 1, y, z).is_transparent() {
                 let mut z_run = 1;
-                for nz in (z + 1)..CHUNK_SIZE.size() {
+                for nz in (z + 1)..data.size.z {
                     if data.block(x, y, nz) != block {
                         break;
                     }
@@ -191,7 +189,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_left();
                 }
                 let mut y_run = 1;
-                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
                         if data.block(x, ny, nz) != block {
                             break 'y_look;
@@ -225,7 +223,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.right() {
             if data.block(x + 1, y, z).is_transparent() {
                 let mut z_run = 1;
-                for nz in (z + 1)..CHUNK_SIZE.size() {
+                for nz in (z + 1)..data.size.z {
                     if data.block(x, y, nz) != block {
                         break;
                     }
@@ -240,7 +238,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_right();
                 }
                 let mut y_run = 1;
-                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
                         if data.block(x, ny, nz) != block {
                             break 'y_look;
@@ -274,7 +272,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.front() {
             if z == 0 || data.block(x, y, z - 1).is_transparent() {
                 let mut x_run = 1;
-                for nx in (x + 1)..CHUNK_SIZE.size() {
+                for nx in (x + 1)..data.size.x {
                     if data.block(nx, y, z) != block {
                         break;
                     }
@@ -289,7 +287,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_front();
                 }
                 let mut y_run = 1;
-                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
                         if data.block(nx, ny, z) != block {
                             break 'y_look;
@@ -323,7 +321,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
         if !current.back() {
             if data.block(x, y, z + 1).is_transparent() {
                 let mut x_run = 1;
-                for nx in (x + 1)..CHUNK_SIZE.size() {
+                for nx in (x + 1)..data.size.x {
                     if data.block(nx, y, z) != block {
                         break;
                     }
@@ -338,7 +336,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     other.set_back();
                 }
                 let mut y_run = 1;
-                'y_look: for ny in (y + 1)..CHUNK_SIZE.size() {
+                'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
                         if data.block(nx, ny, z) != block {
                             break 'y_look;

@@ -104,7 +104,7 @@ impl Clone for DataFetch<'_> {
             type_registry: self.type_registry.clone(),
             tuple_type: self.tuple_type,
             targets: self.targets.clone(),
-            world: self.world.clone(),
+            world: self.world,
             dynamic_reflect: self
                 .dynamic_reflect
                 .as_partial_reflect()
