@@ -24,7 +24,6 @@ const COLOR_MULTIPLIER: vec4<f32> = vec4<f32>(1.0, 1.0, 1.0, 0.5);
 @group(2) @binding(0) var<uniform> atlas_size: vec2<u32>;
 @group(2) @binding(1) var material_color_texture: texture_2d<f32>;
 @group(2) @binding(2) var material_color_sampler: sampler;
-// the wgsl equivalent of a hashmap
 @group(2) @binding(3) var<uniform> face_overrides: array<FaceOverride, 256 / 4>;
 // @group(2) @binding(3) var<uniform> mesh_world_from_local: array<>;
 

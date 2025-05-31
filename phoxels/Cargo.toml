@@ -4,10 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = { version = "0.16.0", default-features = false}
+bevy = { version = "0.16.1", default-features = false, features = ["bevy_pbr"]}
 indexmap = "*"
 
 [features]
 default = ["log", "diagnostics"]
 log = ["bevy/bevy_log"]
 diagnostics = []
+
+[dev-dependencies]
+criterion = { version = "0.6", features = ["html_reports"] }
+
+[[bench]]
+name = "mesh_gen"
+harness = false

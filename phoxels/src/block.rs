@@ -30,7 +30,7 @@ impl BlockMeta {
 impl<T: Block> From<T> for BlockMeta {
     fn from(block: T) -> Self {
         BlockMeta {
-            texture: block.texture(),
+            texture: block.id(),
             is_solid: block.is_solid(),
             not_transparent: !block.is_transparent(),
         }
@@ -40,5 +40,5 @@ impl<T: Block> From<T> for BlockMeta {
 pub trait Block {
     fn is_solid(&self) -> bool;
     fn is_transparent(&self) -> bool;
-    fn texture(&self) -> u8;
+    fn id(&self) -> u8;
 }

@@ -317,7 +317,7 @@ enum BlockType {
 }
 
 impl phoxels::core::Block for BlockType {
-    fn texture(&self) -> u8 {
+    fn id(&self) -> u8 {
         *self as u8
     }
     fn is_solid(&self) -> bool {

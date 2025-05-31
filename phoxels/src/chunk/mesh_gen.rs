@@ -53,7 +53,7 @@ const TOP_FACE: [Vertex; 4] = [
     Vertex::LeftTopFront,  // left top front
 ];
 
-pub async fn make_mesh(data: ChunkData) -> Mesh {
+pub fn make_mesh(data: ChunkData) -> Mesh {
     let mut mesh = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::RENDER_WORLD,

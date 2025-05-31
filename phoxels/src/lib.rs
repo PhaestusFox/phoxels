@@ -7,6 +7,10 @@ pub mod core {
     pub use crate::prelude::*;
 }
 
+pub mod dev {
+    pub use crate::chunk::mesh_gen::make_mesh;
+}
+
 #[cfg(feature = "diagnostics")]
 mod diagnostics;
 

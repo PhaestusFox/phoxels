@@ -46,8 +46,8 @@ impl Default for VoxelMaterial {
 
 impl VoxelMaterial {
     pub fn set_override(&mut self, block: impl Block, override_data: BlockOverride) {
-        let index = (block.texture() / 4) as usize;
-        let offset = (block.texture() % 4) as u32;
+        let index = (block.id() / 4) as usize;
+        let offset = (block.id() % 4) as u32;
 
         debug_assert!(
             index < self.overrides.len(),

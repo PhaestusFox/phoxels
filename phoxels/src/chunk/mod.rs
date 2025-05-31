@@ -69,6 +69,14 @@ impl ChunkData {
         }
     }
 
+    pub fn solid(block: impl Block) -> Self {
+        ChunkData {
+            blocks: [block.into(); CHUNK_SIZE.volume()],
+            #[cfg(feature = "diagnostics")]
+            count: CHUNK_SIZE.volume(),
+        }
+    }
+
     #[inline(always)]
     fn set_block_unchecked(&mut self, x: usize, y: usize, z: usize, block: impl Into<BlockMeta>) {
         let index = x + y * CHUNK_SIZE.size() + z * CHUNK_SIZE.aria();
@@ -126,8 +134,9 @@ impl ChunkData {
         Some(T::from(block_meta))
     }
 
+    #[inline(always)]
     pub(crate) async fn generate_mesh(self) -> Mesh {
-        mesh_gen::make_mesh(self).await
+        mesh_gen::make_mesh(self)
     }
 
     fn on_insert(
@@ -183,7 +192,7 @@ impl ChunkData {
     }
 }
 
-mod mesh_gen;
+pub(crate) mod mesh_gen;
 
 // #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut)]
 // #[component(immutable, on_insert = ChunkId::on_insert)]
