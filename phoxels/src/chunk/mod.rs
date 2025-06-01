@@ -82,7 +82,7 @@ impl ChunkData {
     pub fn solid(block: impl Block) -> Self {
         let mut block_meta = [BlockMeta::EMPTY; 256];
         block_meta[block.id() as usize] = BlockMeta::from(block);
-        let meta_fills = if block.id() > 127 {
+        let meta_fills = if block.id() < 128 {
             (1 << block.id() as usize, 0)
         } else {
             (0, 1 << (block.id() - 128) as usize)
