@@ -1,12 +1,16 @@
 use std::num::NonZeroU8;
 
 use bevy::{
+    asset::{load_internal_asset, weak_handle},
     prelude::*,
     render::{
         mesh::{MeshVertexAttribute, VertexFormat},
         render_resource::AsBindGroup,
     },
 };
+
+pub const FRAGMENT_SHADER: Handle<Shader> = weak_handle!("de68ce2f-34b9-4c48-a82a-1981ec40d447");
+pub const VERTEX_SHADER: Handle<Shader> = weak_handle!("3e3a56da-f9a3-4619-8925-60158ccd3916");
 
 use crate::core::Block;
 
@@ -17,6 +21,8 @@ pub struct VoxelShaderPlugin;
 
 impl Plugin for VoxelShaderPlugin {
     fn build(&self, app: &mut App) {
+        load_internal_asset!(app, FRAGMENT_SHADER, "voxel.wgsl", Shader::from_wgsl);
+        load_internal_asset!(app, VERTEX_SHADER, "voxel.wgsl", Shader::from_wgsl);
         app.add_plugins(MaterialPlugin::<VoxelMaterial>::default());
     }
 }
@@ -185,7 +191,8 @@ pub struct BlockOverrides {
 
 impl Material for VoxelMaterial {
     fn fragment_shader() -> bevy::render::render_resource::ShaderRef {
-        "shaders/voxel.wgsl".into()
+        FRAGMENT_SHADER.into()
+        // "shaders/voxel.wgsl".into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {
@@ -193,7 +200,8 @@ impl Material for VoxelMaterial {
     }
 
     fn vertex_shader() -> bevy::render::render_resource::ShaderRef {
-        "shaders/voxel.wgsl".into()
+        VERTEX_SHADER.into()
+        // "shaders/voxel.wgsl".into()
     }
 
     // fn prepass_vertex_shader() -> bevy::render::render_resource::ShaderRef {
