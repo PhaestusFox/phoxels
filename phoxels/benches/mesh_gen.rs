@@ -1,9 +1,9 @@
-use std::time::Duration;
-
 use criterion::{Criterion, criterion_group, criterion_main};
 use phoxels::core::CHUNK_SIZE;
 use phoxels::prelude::*;
 use rand::{Rng, SeedableRng, rngs::StdRng};
+use std::hint::black_box;
+use std::time::Duration;
 fn get_empty() -> ChunkData {
     ChunkData::empty()
 }
@@ -64,7 +64,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("gen_empty", |b| {
         b.iter_batched(
             get_empty,
-            phoxels::dev::make_mesh,
+            black_box(phoxels::dev::make_mesh),
             criterion::BatchSize::SmallInput,
         )
     });
@@ -72,28 +72,28 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("gen_solid", |b| {
         b.iter_batched(
             get_solid,
-            phoxels::dev::make_mesh,
+            black_box(phoxels::dev::make_mesh),
             criterion::BatchSize::SmallInput,
         )
     });
     c.bench_function("gen_10_full", |b| {
         b.iter_batched(
             get_mostly_full,
-            phoxels::dev::make_mesh,
+            black_box(phoxels::dev::make_mesh),
             criterion::BatchSize::SmallInput,
         )
     });
     c.bench_function("gen_10_empty", |b| {
         b.iter_batched(
             get_mostly_empty,
-            phoxels::dev::make_mesh,
+            black_box(phoxels::dev::make_mesh),
             criterion::BatchSize::SmallInput,
         )
     });
     c.bench_function("worst case", |b| {
         b.iter_batched(
             get_worst_case,
-            phoxels::dev::make_mesh,
+            black_box(phoxels::dev::make_mesh),
             criterion::BatchSize::SmallInput,
         )
     });
