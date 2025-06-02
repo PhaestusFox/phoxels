@@ -90,6 +90,10 @@ impl ChunkData {
         }
     }
 
+    pub fn iter(&self) -> std::slice::Iter<'_, BlockId> {
+        self.blocks.iter()
+    }
+
     pub fn solid(block: impl Block) -> Self {
         let mut block_meta = [BlockMeta::EMPTY; 256];
         block_meta[block.id() as usize] = BlockMeta::from(block);
