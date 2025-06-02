@@ -222,7 +222,7 @@ impl ChunkData {
     }
 
     #[inline(always)]
-    pub(crate) async fn generate_mesh(self) -> Mesh {
+    pub(crate) async fn generate_mesh(self) -> (Mesh, Aabb) {
         mesh_gen::make_mesh(self)
     }
 

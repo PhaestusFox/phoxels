@@ -15,7 +15,10 @@ use bevy::{
         DynamicTuple, FromReflect, GetTypeRegistration, PartialReflect, Reflect, ReflectFromPtr,
         Tuple, TupleInfo, TypeInfo,
     },
-    render::mesh::{Mesh, Mesh3d},
+    render::{
+        mesh::{Mesh, Mesh3d},
+        primitives::Aabb,
+    },
     tasks::Task,
 };
 use indexmap::IndexSet;
@@ -47,8 +50,8 @@ impl ChunkGenerator {
 #[derive(Resource, Default)]
 pub struct ChunkMesher {
     to_generate: IndexSet<Entity>,
-    generating: HashMap<Entity, Task<Mesh>>,
-    old_generating: HashMap<Entity, Task<Mesh>>,
+    generating: HashMap<Entity, Task<(Mesh, Aabb)>>,
+    old_generating: HashMap<Entity, Task<(Mesh, Aabb)>>,
 }
 
 impl ChunkMesher {
@@ -572,10 +575,10 @@ pub(super) fn extract_finished_chunk_mesh(
         #[cfg(feature = "log")]
         bevy::log::trace!("Chunk {:?} has finished meshing inserting mesh", entity);
 
-        let data = bevy::tasks::block_on(task);
+        let (mesh, aabb) = bevy::tasks::block_on(task);
         commands
             .entity(entity)
-            .insert(Mesh3d(mesh_assets.add(data)));
+            .insert((Mesh3d(mesh_assets.add(mesh)), aabb));
     }
 }
 

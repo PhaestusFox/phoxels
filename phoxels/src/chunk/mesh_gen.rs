@@ -1,4 +1,5 @@
-use bevy::math::UVec3;
+use bevy::math::{UVec3, Vec3};
+use bevy::render::primitives::Aabb;
 use bevy::{asset::RenderAssetUsages, render::mesh::Mesh};
 
 use super::{CHUNK_SIZE, ChunkData};
@@ -53,11 +54,13 @@ const TOP_FACE: [Vertex; 4] = [
     Vertex::LeftTopFront,  // left top front
 ];
 
-pub fn make_mesh(data: ChunkData) -> Mesh {
+pub fn make_mesh(data: ChunkData) -> (Mesh, Aabb) {
     let mut mesh = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::RENDER_WORLD,
     );
+    let mut min = data.size;
+    let mut max = UVec3::ZERO;
     let mut positions = Vec::new();
 
     #[cfg(feature = "standerd_position")]
@@ -75,6 +78,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             continue; // All block already added
         }
         let mut m_block = VertexSet::default();
+        let mut long_x = 0;
+        let mut long_y: u32 = 0;
+        let mut long_z: u32 = 0;
         let block = data.texture(x, y, z);
         if !current.top() {
             if data.block_meta(x, y + 1, z).is_transparent() {
@@ -115,6 +121,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     z_run += 1;
                 }
                 if x_run > 1 || z_run > 1 {
+                    long_x = long_x.max(x_run);
+                    // long_y = long_y.max(y_run);
+                    long_z = long_z.max(z_run as u32);
                     m_block.add_run(&TOP_FACE, x_run as u8, 1, z_run);
                 } else {
                     m_block.add_face(&TOP_FACE);
@@ -164,6 +173,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     z_run += 1;
                 }
                 if x_run > 1 || z_run > 1 {
+                    long_x = long_x.max(x_run);
+                    // long_y = long_y.max(y_run);
+                    long_z = long_z.max(z_run as u32);
                     m_block.add_run(&BOTTOM_FACE, x_run as u8, 1, z_run);
                 } else {
                     m_block.add_face(&BOTTOM_FACE);
@@ -213,6 +225,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     y_run += 1;
                 }
                 if y_run > 1 || z_run > 1 {
+                    // long_x = long_x.max(x_run);
+                    long_y = long_y.max(y_run as u32);
+                    long_z = long_z.max(z_run);
                     m_block.add_run(&LEFT_FACE, 1, y_run, z_run as u8);
                 } else {
                     m_block.add_face(&LEFT_FACE);
@@ -262,6 +277,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     y_run += 1;
                 }
                 if y_run > 1 || z_run > 1 {
+                    // long_x = long_x.max(x_run);
+                    long_y = long_y.max(y_run as u32);
+                    long_z = long_z.max(z_run);
                     m_block.add_run(&RIGHT_FACE, 1, y_run, z_run as u8);
                 } else {
                     m_block.add_face(&RIGHT_FACE);
@@ -311,6 +329,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     y_run += 1;
                 }
                 if y_run > 1 || x_run > 1 {
+                    long_x = long_x.max(x_run);
+                    long_y = long_y.max(y_run as u32);
+                    // long_z = long_z.max(z_run);
                     m_block.add_run(&FRONT_FACE, x_run as u8, y_run, 1);
                 } else {
                     m_block.add_face(&FRONT_FACE);
@@ -360,6 +381,9 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                     y_run += 1;
                 }
                 if y_run > 1 || x_run > 1 {
+                    long_x = long_x.max(x_run);
+                    long_y = long_y.max(y_run as u32);
+                    // long_z = long_z.max(z_run);
                     m_block.add_run(&BACK_FACE, x_run as u8, y_run, 1);
                 } else {
                     m_block.add_face(&BACK_FACE);
@@ -368,6 +392,8 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             current.set_back();
         }
         let id = data.texture(x, y, z);
+        min = UVec3::new(x, y, z).min(min);
+        max = UVec3::new(x + long_x, y + long_y, z + long_x);
         checked.insert(UVec3::new(x, y, z), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
         positions.extend(m_block.vertexs.iter().map(|p| {
@@ -387,7 +413,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
     #[cfg(feature = "standerd_position")]
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_old);
     mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
-    mesh
+    (mesh, Aabb::from_min_max(min.as_vec3(), max.as_vec3()))
 }
 
 #[derive(Default)]
