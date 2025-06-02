@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::{
     app::Update,
     ecs::{
@@ -10,14 +12,15 @@ use bevy::{
     render::mesh::Mesh3d,
 };
 
-use crate::core::ChunkData;
+use crate::core::{Block, ChunkData};
 
-pub struct PhoxelDiagnostics;
+#[derive(Default)]
+pub struct PhoxelDiagnostics<T: Block>(PhantomData<T>);
 
-impl Plugin for PhoxelDiagnostics {
+impl<T: Block> Plugin for PhoxelDiagnostics<T> {
     fn build(&self, app: &mut App) {
         app.init_resource::<VoxelCount>()
-            .add_systems(Update, update_on_mesh);
+            .add_systems(Update, update_on_mesh::<T>);
     }
 }
 
@@ -27,10 +30,10 @@ pub struct VoxelCount {
     pub meshed: usize,
 }
 
-fn update_on_mesh(
+fn update_on_mesh<T: Block>(
     mut diagnostics: ResMut<VoxelCount>,
-    mesh_added: Query<&ChunkData, Added<Mesh3d>>,
-    all: Query<&ChunkData>,
+    mesh_added: Query<&ChunkData<T>, Added<Mesh3d>>,
+    all: Query<&ChunkData<T>>,
     mut removed: RemovedComponents<Mesh3d>,
 ) {
     for chunk in mesh_added.iter() {

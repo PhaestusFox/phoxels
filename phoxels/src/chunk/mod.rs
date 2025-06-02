@@ -52,13 +52,13 @@ impl ChunkSize {
 }
 
 #[derive(bevy::prelude::Component, Clone, Debug)]
-#[component(on_insert = ChunkData::on_insert, on_remove = ChunkData::on_remove)]
+#[component(on_insert = ChunkData::<T>::on_insert, on_remove = ChunkData::<T>::on_remove)]
 #[require(Aabb = Aabb::from_min_max(
     Vec3::ZERO,
     Vec3::ONE * CHUNK_SIZE.size() as f32,
 ))]
-pub struct ChunkData {
-    blocks: Vec<BlockId>,
+pub struct ChunkData<T: Block> {
+    blocks: Vec<T>,
     block_meta: [BlockMeta; 256],
     meta_fills: (u128, u128),
     size: UVec3,
@@ -66,8 +66,8 @@ pub struct ChunkData {
     count: usize,
 }
 
-impl ChunkData {
-    pub fn new(size: UVec3) -> ChunkData {
+impl<T: Block> ChunkData<T> {
+    pub fn new(size: UVec3) -> ChunkData<T> {
         let len = size.x * size.y * size.z;
         ChunkData {
             blocks: Vec::with_capacity(len as usize),
@@ -79,22 +79,11 @@ impl ChunkData {
         }
     }
 
-    pub fn empty() -> Self {
-        ChunkData {
-            blocks: vec![BlockId(0); CHUNK_SIZE.volume() as usize],
-            meta_fills: (0, 0),
-            size: UVec3::splat(CHUNK_SIZE.size()),
-            block_meta: [BlockMeta::EMPTY; 256],
-            #[cfg(feature = "diagnostics")]
-            count: 0,
-        }
-    }
-
-    pub fn iter(&self) -> std::slice::Iter<'_, BlockId> {
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
         self.blocks.iter()
     }
 
-    pub fn solid(block: impl Block) -> Self {
+    pub fn solid(block: T) -> Self {
         let mut block_meta = [BlockMeta::EMPTY; 256];
         block_meta[block.id() as usize] = BlockMeta::from(block);
         let meta_fills = if block.id() < 128 {
@@ -103,7 +92,7 @@ impl ChunkData {
             (0, 1 << (block.id() - 128) as usize)
         };
         ChunkData {
-            blocks: vec![BlockId(block.id()); CHUNK_SIZE.volume() as usize],
+            blocks: vec![block; CHUNK_SIZE.volume() as usize],
             size: UVec3::splat(CHUNK_SIZE.size()),
             block_meta,
             meta_fills,
@@ -113,51 +102,9 @@ impl ChunkData {
     }
 
     #[inline(always)]
-    fn set_block_unchecked(&mut self, x: u32, y: u32, z: u32, block: u8) {
+    fn set_block_unchecked(&mut self, x: u32, y: u32, z: u32, block: T) {
         let index = self.get_index(x, y, z);
-        self.blocks[index] = BlockId(block);
-    }
-
-    /// Set the block at the given coordinates
-    /// Panics if the coordinates are out of bounds
-    pub fn set_block(&mut self, x: u32, y: u32, z: u32, block: impl Block) {
-        debug_assert!(
-            x < self.size.x && y < self.size.y && z < self.size.z,
-            "block index out of bounds: ({}, {}, {})",
-            x,
-            y,
-            z
-        );
-
-        self.add_meta(block);
-
-        let block_id = block.id();
-        #[cfg(feature = "diagnostics")]
-        let meta = BlockMeta::from(block);
-        let index = self.get_index(x, y, z);
-        if self.blocks.len() <= index {
-            let adding = index - self.blocks.len();
-            self.blocks.extend((0..adding).map(|_| BlockId(0)));
-            self.blocks.push(BlockId(block_id));
-            #[cfg(feature = "diagnostics")]
-            {
-                self.count += adding;
-            }
-            return;
-        }
-
-        #[cfg(feature = "diagnostics")]
-        if self.blocks[index] != block_id {
-            if meta == BlockMeta::EMPTY {
-                self.count -= 1;
-            } else {
-                self.count += 1;
-            }
-        } else {
-            return;
-        }
-
-        self.set_block_unchecked(x, y, z, block_id);
+        self.blocks[index] = block;
     }
 
     #[inline(always)]
@@ -182,7 +129,7 @@ impl ChunkData {
     #[inline(always)]
     pub fn get_block_meta(&self, x: u32, y: u32, z: u32) -> Option<BlockMeta> {
         self.block_meta
-            .get(self.get_block_id(x, y, z)?.0 as usize)
+            .get(self.get_block(x, y, z)?.id() as usize)
             .copied()
     }
 
@@ -193,14 +140,10 @@ impl ChunkData {
         self.get_block_meta(x, y, z).unwrap_or(BlockMeta::EMPTY)
     }
 
-    pub fn get_block_id(&self, x: u32, y: u32, z: u32) -> Option<BlockId> {
+    pub fn get_block(&self, x: u32, y: u32, z: u32) -> Option<T> {
         let index = self.get_index(x, y, z);
-        if self.in_bounds(x, y, z) {
-            if index < self.blocks.len() {
-                Some(self.blocks[index])
-            } else {
-                Some(BlockId(0))
-            }
+        if index < self.blocks.len() && self.in_bounds(x, y, z) {
+            Some(self.blocks[index])
         } else {
             None
         }
@@ -209,7 +152,7 @@ impl ChunkData {
     pub fn texture(&self, x: u32, y: u32, z: u32) -> u32 {
         let index = self.get_index(x, y, z);
         if self.blocks.len() > index && self.in_bounds(x, y, z) {
-            self.blocks[index].0 as u32
+            self.blocks[index].id() as u32
         } else {
             0
         }
@@ -238,7 +181,7 @@ impl ChunkData {
         {
             let mut chunk_data = world.entity_mut(ctx.entity);
             let mut chunk_data = chunk_data
-                .get_mut::<ChunkData>()
+                .get_mut::<ChunkData<T>>()
                 .expect("ChunkData requires ChunkId");
             chunk_data.update_count();
             let c = chunk_data.voxel_count();
@@ -258,7 +201,7 @@ impl ChunkData {
         {
             let mut chunk_data = world.entity_mut(ctx.entity);
             let mut chunk_data = chunk_data
-                .get_mut::<ChunkData>()
+                .get_mut::<ChunkData<T>>()
                 .expect("ChunkData requires ChunkId");
             chunk_data.update_count();
             let c = chunk_data.voxel_count();
@@ -270,7 +213,7 @@ impl ChunkData {
     fn update_count(&mut self) {
         let mut filled = 0;
         for block in self.blocks.iter() {
-            if self.block_meta[block.0 as usize] != BlockMeta::EMPTY {
+            if self.block_meta[block.id() as usize] != BlockMeta::EMPTY {
                 filled += 1;
             }
         }
@@ -280,6 +223,60 @@ impl ChunkData {
     #[cfg(feature = "diagnostics")]
     pub fn voxel_count(&self) -> usize {
         self.count
+    }
+}
+
+impl<T: Block + Default> ChunkData<T> {
+    pub fn empty() -> Self {
+        ChunkData {
+            blocks: vec![T::default(); CHUNK_SIZE.volume() as usize],
+            meta_fills: (0, 0),
+            size: UVec3::splat(CHUNK_SIZE.size()),
+            block_meta: [BlockMeta::EMPTY; 256],
+            #[cfg(feature = "diagnostics")]
+            count: 0,
+        }
+    }
+
+    /// Set the block at the given coordinates
+    /// Panics if the coordinates are out of bounds
+    pub fn set_block(&mut self, x: u32, y: u32, z: u32, block: T) {
+        debug_assert!(
+            x < self.size.x && y < self.size.y && z < self.size.z,
+            "block index out of bounds: ({}, {}, {})",
+            x,
+            y,
+            z
+        );
+
+        self.add_meta(block);
+
+        #[cfg(feature = "diagnostics")]
+        let meta = BlockMeta::from(block);
+        let index = self.get_index(x, y, z);
+        if self.blocks.len() <= index {
+            let adding = index - self.blocks.len();
+            self.blocks.extend((0..adding).map(|_| T::default()));
+            self.blocks.push(block);
+            #[cfg(feature = "diagnostics")]
+            {
+                self.count += adding;
+            }
+            return;
+        }
+
+        #[cfg(feature = "diagnostics")]
+        if self.blocks[index] != block {
+            if meta == BlockMeta::EMPTY {
+                self.count -= 1;
+            } else {
+                self.count += 1;
+            }
+        } else {
+            return;
+        }
+
+        self.set_block_unchecked(x, y, z, block);
     }
 }
 
@@ -325,17 +322,17 @@ pub(crate) mod mesh_gen;
 //     }
 // }
 
-pub struct ChunkPlugin<T: PhoxelGeneratorData = ()>(PhantomData<T>);
+pub struct ChunkPlugin<T: Block, D: PhoxelGeneratorData = ()>(PhantomData<(D, T)>);
 
-impl<T: PhoxelGeneratorData> Default for ChunkPlugin<T> {
+impl<T: Block, D: PhoxelGeneratorData> Default for ChunkPlugin<T, D> {
     fn default() -> Self {
         ChunkPlugin(PhantomData)
     }
 }
 
-impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
+impl<D: PhoxelGeneratorData, T: Block + Default> Plugin for ChunkPlugin<T, D> {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ChunkGenerator>()
+        app.init_resource::<ChunkGenerator<T>>()
             .init_resource::<ChunkMesher>()
             .init_resource::<GeneratorLimits>();
 
@@ -349,8 +346,8 @@ impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
         app.add_systems(
             Update,
             (
-                manager::extract_finished_chunk_data,
-                manager::start_generating_chunk_data::<T>,
+                manager::extract_finished_chunk_data::<T>,
+                manager::start_generating_chunk_data::<D, T>,
             )
                 .chain()
                 .in_set(ChunkSets::Generate),
@@ -359,7 +356,7 @@ impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
             Update,
             (
                 manager::extract_finished_chunk_mesh,
-                manager::start_generating_chunk_mesh,
+                manager::start_generating_chunk_mesh::<T>,
             )
                 .chain()
                 .in_set(ChunkSets::Mesh),
@@ -382,7 +379,7 @@ pub enum ChunkSets {
 
 #[test]
 fn add_mesh_works() {
-    #[derive(Clone, Copy)]
+    #[derive(Clone, Copy, Default, PartialEq, Eq)]
     struct TestBlock;
     impl Block for TestBlock {
         fn id(&self) -> u8 {

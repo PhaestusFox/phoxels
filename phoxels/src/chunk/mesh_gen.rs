@@ -3,7 +3,7 @@ use bevy::render::primitives::Aabb;
 use bevy::{asset::RenderAssetUsages, render::mesh::Mesh};
 
 use super::{CHUNK_SIZE, ChunkData};
-use crate::core::BlockMeta;
+use crate::core::{Block, BlockMeta};
 use crate::utils::DynBlockIter;
 
 // Back face
@@ -54,7 +54,7 @@ const TOP_FACE: [Vertex; 4] = [
     Vertex::LeftTopFront,  // left top front
 ];
 
-pub fn make_mesh(data: ChunkData) -> (Mesh, Aabb) {
+pub fn make_mesh<T: Block>(data: ChunkData<T>) -> (Mesh, Aabb) {
     let mut mesh = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::RENDER_WORLD,

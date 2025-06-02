@@ -17,9 +17,10 @@ use phoxels::core::{
 pub type GeneratorDataType = ChunkId;
 
 use crate::{
+    BlockType,
+    // simple_shader::{BLOCK_ID, BLOCK_POS, VoxelMaterial as CustomMaterial},
     diganostics::VoxelCount,
     player::Player,
-    // simple_shader::{BLOCK_ID, BLOCK_POS, VoxelMaterial as CustomMaterial},
 };
 
 use phoxels::prelude::VoxelMaterial as CustomMaterial;
@@ -40,7 +41,7 @@ pub fn plugin(app: &mut App) {
     app.insert_resource(map_descriptor.clone());
     app.insert_resource(phoxels::prelude::PhoxelGenerator::new(
         move |id: GeneratorDataType| {
-            let mut chunk = phoxels::prelude::ChunkData::empty();
+            let mut chunk = phoxels::prelude::ChunkData::<BlockType>::empty();
             let map_descriptor = map_descriptor.read().unwrap();
             // let (id, _) = id;
             for x in 0..CHUNK_SIZE {
@@ -175,7 +176,7 @@ fn spawn_world(
     mut commands: Commands,
     block_data: Res<BlockDescriptor>,
     asset_server: Res<AssetServer>,
-    generator: Res<PhoxelGenerator<GeneratorDataType>>,
+    generator: Res<PhoxelGenerator<BlockType, GeneratorDataType>>,
 ) {
     // map_descriptor.min_max_y();
     commands.spawn((
@@ -310,36 +311,5 @@ impl MapDescriptor {
         let mdi = MapDescriptorInernal { noise };
         mdi.min_max_y();
         MapDescriptor(GeneratorData::new(RwLock::new(mdi)))
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BlockType {
-    Air,
-    Stone,
-    Dirt,
-    Cobblestone = 16,
-
-    Furnuse = 44,
-    Grass = 77,
-}
-
-impl phoxels::core::Block for BlockType {
-    fn id(&self) -> u8 {
-        *self as u8
-    }
-    fn is_solid(&self) -> bool {
-        match self {
-            BlockType::Air => false,
-            BlockType::Stone | BlockType::Cobblestone | BlockType::Dirt | BlockType::Grass => true,
-            BlockType::Furnuse => true,
-        }
-    }
-    fn is_transparent(&self) -> bool {
-        match self {
-            BlockType::Air => true,
-            BlockType::Stone | BlockType::Cobblestone | BlockType::Dirt | BlockType::Grass => false,
-            BlockType::Furnuse => false,
-        }
     }
 }

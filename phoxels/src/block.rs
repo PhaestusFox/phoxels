@@ -31,7 +31,7 @@ impl<T: Block> From<T> for BlockMeta {
     }
 }
 
-pub trait Block: Copy {
+pub trait Block: Copy + Eq + Send + Sync + 'static {
     fn is_solid(&self) -> bool;
     fn is_transparent(&self) -> bool;
     fn id(&self) -> u8;

@@ -4,6 +4,8 @@ use phoxels::prelude::*;
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use std::hint::black_box;
 use std::time::Duration;
+type ChunkData = phoxels::prelude::ChunkData<BlockType>;
+
 fn get_empty() -> ChunkData {
     ChunkData::empty()
 }
@@ -102,8 +104,9 @@ fn criterion_benchmark(c: &mut Criterion) {
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
 enum BlockType {
+    #[default]
     Air,
     Stone,
     Dirt,
