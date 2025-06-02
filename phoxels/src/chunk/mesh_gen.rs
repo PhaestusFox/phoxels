@@ -75,12 +75,12 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             continue; // All block already added
         }
         let mut m_block = VertexSet::default();
-
+        let block = data.texture(x, y, z);
         if !current.top() {
             if data.block_meta(x, y + 1, z).is_transparent() {
                 let mut x_run = 1;
                 for x in (x + 1)..data.size.x {
-                    if data.block_meta(x, y, z) != block {
+                    if data.texture(x, y, z) != block {
                         break;
                     }
                     if !data.block_meta(x, y + 1, z).is_transparent() {
@@ -96,7 +96,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut z_run = 1;
                 'z_loop: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
-                        if data.block_meta(x, y, z) != block {
+                        if data.texture(x, y, z) != block {
                             break 'z_loop;
                         }
                         if !data.block_meta(x, y + 1, z).is_transparent() {
@@ -126,7 +126,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             if y == 0 || data.block_meta(x, y - 1, z).is_transparent() {
                 let mut x_run = 1;
                 for x in (x + 1)..data.size.x {
-                    if data.block_meta(x, y, z) != block {
+                    if data.texture(x, y, z) != block {
                         break;
                     }
                     if y != 0 && !data.block_meta(x, y - 1, z).is_transparent() {
@@ -142,7 +142,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut z_run = 1;
                 'z_look: for z in (z + 1)..data.size.z {
                     for x in x..(x + x_run) {
-                        if data.block_meta(x, y, z) != block {
+                        if data.texture(x, y, z) != block {
                             break 'z_look;
                         }
                         if y != 0 && !data.block_meta(x, y - 1, z).is_transparent() {
@@ -175,7 +175,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             if x == 0 || data.block_meta(x - 1, y, z).is_transparent() {
                 let mut z_run = 1;
                 for nz in (z + 1)..data.size.z {
-                    if data.block_meta(x, y, nz) != block {
+                    if data.texture(x, y, nz) != block {
                         break;
                     }
                     if x != 0 && !data.block_meta(x - 1, y, nz).is_transparent() {
@@ -191,7 +191,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
-                        if data.block_meta(x, ny, nz) != block {
+                        if data.texture(x, ny, nz) != block {
                             break 'y_look;
                         }
                         if x != 0 && !data.block_meta(x - 1, ny, nz).is_transparent() {
@@ -224,7 +224,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             if data.block_meta(x + 1, y, z).is_transparent() {
                 let mut z_run = 1;
                 for nz in (z + 1)..data.size.z {
-                    if data.block_meta(x, y, nz) != block {
+                    if data.texture(x, y, nz) != block {
                         break;
                     }
                     if !data.block_meta(x + 1, y, nz).is_transparent() {
@@ -240,7 +240,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nz in z..(z + z_run) {
-                        if data.block_meta(x, ny, nz) != block {
+                        if data.texture(x, ny, nz) != block {
                             break 'y_look;
                         }
                         if !data.block_meta(x + 1, ny, nz).is_transparent() {
@@ -273,7 +273,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             if z == 0 || data.block_meta(x, y, z - 1).is_transparent() {
                 let mut x_run = 1;
                 for nx in (x + 1)..data.size.x {
-                    if data.block_meta(nx, y, z) != block {
+                    if data.texture(nx, y, z) != block {
                         break;
                     }
                     if z != 0 && !data.block_meta(nx, y, z - 1).is_transparent() {
@@ -289,7 +289,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
-                        if data.block_meta(nx, ny, z) != block {
+                        if data.texture(nx, ny, z) != block {
                             break 'y_look;
                         }
                         if z != 0 && !data.block_meta(nx, ny, z - 1).is_transparent() {
@@ -322,7 +322,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
             if data.block_meta(x, y, z + 1).is_transparent() {
                 let mut x_run = 1;
                 for nx in (x + 1)..data.size.x {
-                    if data.block_meta(nx, y, z) != block {
+                    if data.texture(nx, y, z) != block {
                         break;
                     }
                     if !data.block_meta(nx, y, z + 1).is_transparent() {
@@ -338,7 +338,7 @@ pub fn make_mesh(data: ChunkData) -> Mesh {
                 let mut y_run = 1;
                 'y_look: for ny in (y + 1)..data.size.y {
                     for nx in x..(x + x_run) {
-                        if data.block_meta(nx, ny, z) != block {
+                        if data.texture(nx, ny, z) != block {
                             break 'y_look;
                         }
                         if !data.block_meta(nx, ny, z + 1).is_transparent() {
