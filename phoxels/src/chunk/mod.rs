@@ -130,8 +130,20 @@ impl ChunkData {
         let block_id = block.id();
         #[cfg(feature = "diagnostics")]
         let meta = BlockMeta::from(block);
+        let index = self.get_index(x, y, z);
+        if self.blocks.len() <= index {
+            let adding = index - self.blocks.len();
+            self.blocks.extend((0..adding).map(|_| BlockId(0)));
+            self.blocks.push(BlockId(block_id));
+            #[cfg(feature = "diagnostics")]
+            {
+                self.count += adding;
+            }
+            return;
+        }
+
         #[cfg(feature = "diagnostics")]
-        if self.blocks[self.get_index(x, y, z)] != block_id {
+        if self.blocks[index] != block_id {
             if meta == BlockMeta::EMPTY {
                 self.count -= 1;
             } else {
