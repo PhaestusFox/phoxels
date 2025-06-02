@@ -192,10 +192,10 @@ impl ChunkData {
     pub fn get_block_id(&self, x: u32, y: u32, z: u32) -> Option<BlockId> {
         let index = self.get_index(x, y, z);
         if self.in_bounds(x, y, z) {
-            if index > self.blocks.len() {
-                Some(BlockId(0))
-            } else {
+            if index < self.blocks.len() {
                 Some(self.blocks[index])
+            } else {
+                Some(BlockId(0))
             }
         } else {
             None
@@ -204,7 +204,7 @@ impl ChunkData {
 
     pub fn texture(&self, x: u32, y: u32, z: u32) -> u32 {
         let index = self.get_index(x, y, z);
-        if index < self.blocks.len() && self.in_bounds(x, y, z) {
+        if self.blocks.len() > index && self.in_bounds(x, y, z) {
             self.blocks[index].0 as u32
         } else {
             0
