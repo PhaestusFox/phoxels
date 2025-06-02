@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use crate::{block::BlockId, core::*};
 use bevy::{
     app::{App, Plugin, Update},
-    color::palettes::css::BLACK,
     ecs::schedule::IntoScheduleConfigs,
     math::UVec3,
     prelude::Vec3,
@@ -68,6 +67,18 @@ pub struct ChunkData {
 }
 
 impl ChunkData {
+    pub fn new(size: UVec3) -> ChunkData {
+        let len = size.x * size.y * size.z;
+        ChunkData {
+            blocks: Vec::with_capacity(len as usize),
+            block_meta: [BlockMeta::EMPTY; 256],
+            meta_fills: (0, 0),
+            size,
+            #[cfg(feature = "diagnostics")]
+            count: 0,
+        }
+    }
+
     pub fn empty() -> Self {
         ChunkData {
             blocks: vec![BlockId(0); CHUNK_SIZE.volume() as usize],
