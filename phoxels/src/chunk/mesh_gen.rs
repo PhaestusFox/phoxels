@@ -392,8 +392,12 @@ pub fn make_mesh(data: ChunkData) -> (Mesh, Aabb) {
             current.set_back();
         }
         let id = data.texture(x, y, z);
-        min = UVec3::new(x, y, z).min(min);
-        max = UVec3::new(x + long_x, y + long_y, z + long_x);
+        min.x = x.min(min.x);
+        min.y = y.min(min.y);
+        min.z = z.min(min.z);
+        max.x = (x + long_x).max(max.x);
+        max.y = (y + long_y).max(max.y);
+        max.z = (z + long_z).max(max.z);
         checked.insert(UVec3::new(x, y, z), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
         positions.extend(m_block.vertexs.iter().map(|p| {
