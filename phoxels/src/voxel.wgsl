@@ -21,7 +21,7 @@ struct FragmentOutput {
 // we can import items from shader modules in the assets folder with a quoted path
 const COLOR_MULTIPLIER: vec4<f32> = vec4<f32>(1.0, 1.0, 1.0, 0.5);
 
-@group(2) @binding(0) var<uniform> atlas_size: vec2<u32>;
+@group(2) @binding(0) var<uniform> atlas_size: vec4<u32>;
 @group(2) @binding(1) var material_color_texture: texture_2d<f32>;
 @group(2) @binding(2) var material_color_sampler: sampler;
 @group(2) @binding(3) var<uniform> face_overrides: array<FaceOverride, 256 / 4>;
@@ -99,7 +99,7 @@ fn fragment(
     var uvx = f32(x) /  f32(atlas_size.x);
     var uvy = (1.+f32(y)) /  f32(atlas_size.x);
     
-    let texture_step = 1. / vec2<f32>(atlas_size);
+    let texture_step = 1. / vec4<f32>(atlas_size);
 
     
     var axis: f32;

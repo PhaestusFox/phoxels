@@ -316,6 +316,7 @@ impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
         app.add_systems(
             Update,
             (
+                #[cfg(not(target_arch = "wasm32"))]
                 manager::extract_finished_chunk_data,
                 manager::start_generating_chunk_data::<T>,
             )
@@ -325,6 +326,7 @@ impl<T: PhoxelGeneratorData> Plugin for ChunkPlugin<T> {
         app.add_systems(
             Update,
             (
+                #[cfg(not(target_arch = "wasm32"))]
                 manager::extract_finished_chunk_mesh,
                 manager::start_generating_chunk_mesh,
             )

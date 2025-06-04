@@ -18,7 +18,14 @@ fn main() {
                 }),
                 ..Default::default()
             })
-            .set(ImagePlugin::default_nearest()),
+            .set(ImagePlugin::default_nearest())
+            .set(AssetPlugin {
+                // Wasm builds will check for meta files (that don't exist) if this isn't set.
+                // This causes errors and even panics in web builds on itch.
+                // See https://github.com/bevyengine/bevy_github_ci_template/issues/48.
+                meta_check: bevy::asset::AssetMetaCheck::Never,
+                ..default()
+            }),
         bevy::diagnostic::FrameTimeDiagnosticsPlugin::default(),
     ));
     app.add_plugins(phoxels_game::GamePlugin);

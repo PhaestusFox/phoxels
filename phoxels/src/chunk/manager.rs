@@ -450,6 +450,7 @@ pub(super) fn start_generating_chunk_data<T: PhoxelGeneratorData>(
     limits: Res<GeneratorLimits>,
     chunk_specific_generators: Query<&PhoxelGenerator<T>>,
     chunk_data: Query<PhoxelGeneratorDataFetch<T>>,
+    #[cfg(target_arch = "wasm32")] mut commands: bevy::prelude::Commands,
 ) {
     if generator.generating() >= limits.max_generating_chunks {
         return;
@@ -486,6 +487,12 @@ pub(super) fn start_generating_chunk_data<T: PhoxelGeneratorData>(
         };
         let chunk_generator = voxel_generator.clone();
         let data = d.to_owned();
+        #[cfg(target_arch = "wasm32")]
+        {
+            let data = chunk_generator.0(data);
+            commands.entity(chunk_id).insert(data);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         generator
             .generating
             .insert(chunk_id, task_pool.spawn(chunk_generator.generate(data)));
@@ -496,6 +503,8 @@ pub(super) fn start_generating_chunk_mesh(
     mut generator: ResMut<ChunkMesher>,
     limits: Res<GeneratorLimits>,
     chunk_data: Query<&ChunkData>,
+    #[cfg(target_arch = "wasm32")] mut commands: bevy::prelude::Commands,
+    #[cfg(target_arch = "wasm32")] mut assets: bevy::prelude::ResMut<bevy::prelude::Assets<Mesh>>,
 ) {
     if generator.generating() >= limits.max_meshing_chunks {
         return;
@@ -517,6 +526,12 @@ pub(super) fn start_generating_chunk_mesh(
             bevy::log::error!("ChunkData not found for chunk: {:?}", chunk_id);
             continue;
         };
+        #[cfg(target_arch = "wasm32")]
+        {
+            let mesh = crate::chunk::mesh_gen::make_mesh(chunk_data.clone());
+            commands.entity(chunk_id).insert(Mesh3d(assets.add(mesh)));
+        }
+        #[cfg(not(target_arch = "wasm32"))]
         generator.generating.insert(
             chunk_id,
             task_pool.spawn(chunk_data.clone().generate_mesh()),
@@ -524,6 +539,7 @@ pub(super) fn start_generating_chunk_mesh(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn extract_finished_chunk_data(
     mut generator: ResMut<ChunkGenerator>,
     mut commands: bevy::prelude::Commands,
@@ -549,6 +565,7 @@ pub(super) fn extract_finished_chunk_data(
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(super) fn extract_finished_chunk_mesh(
     mut generator: ResMut<ChunkMesher>,
     mut commands: bevy::prelude::Commands,

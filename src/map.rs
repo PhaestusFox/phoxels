@@ -29,7 +29,7 @@ const CHUNK_ARIA: i32 = CHUNK_SIZE * CHUNK_SIZE;
 const CHUNK_VOLUME: i32 = CHUNK_ARIA * CHUNK_SIZE;
 const GROUND_HIGHT: i32 = 8;
 
-const MAP_SIZE: i32 = 10;
+const MAP_SIZE: i32 = 50;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<BlockDescriptor>();
@@ -225,7 +225,7 @@ impl FromWorld for BlockDescriptor {
 
         let mut material_with_override = CustomMaterial {
             base_color_texture: Some(texture.clone()),
-            atlas_shape: UVec2::new(16, 16),
+            atlas_shape: UVec4::new(16, 16, 0, 0),
             ..Default::default()
         };
 
