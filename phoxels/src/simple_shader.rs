@@ -30,7 +30,9 @@ impl Plugin for VoxelShaderPlugin {
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct VoxelMaterial {
     #[uniform(0)]
-    pub atlas_shape: UVec2,
+    /// The shape of the atlas, in the format (width, height, 0, 0).
+    /// This is so the type is 16 bytes long, which is required for the some backends.
+    pub atlas_shape: UVec4,
     #[texture(1)]
     #[sampler(2)]
     pub base_color_texture: Option<Handle<Image>>,
@@ -42,7 +44,7 @@ pub struct VoxelMaterial {
 impl Default for VoxelMaterial {
     fn default() -> Self {
         Self {
-            atlas_shape: UVec2::new(16, 16),
+            atlas_shape: UVec4::new(16, 16, 0, 0),
             base_color_texture: None,
             alpha_mode: AlphaMode::Opaque,
             overrides: [BlockOverrides::default(); 256 / 4],
