@@ -36,8 +36,16 @@ impl<T: Block> ChunkGenerator<T> {
         self.to_generate.insert(chunk_id);
     }
 
-    fn generating(&self) -> usize {
+    pub fn generating(&self) -> usize {
         self.generating.len()
+    }
+
+    pub fn len(&self) -> usize {
+        self.to_generate.len() + self.generating()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     // Sets the priority of the chunks to generate based on a custom function.
@@ -60,8 +68,16 @@ impl ChunkMesher {
         self.to_generate.insert(chunk_id);
     }
 
-    fn generating(&self) -> usize {
+    pub fn generating(&self) -> usize {
         self.generating.len()
+    }
+
+    pub fn len(&self) -> usize {
+        self.to_generate.len() + self.generating()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     // Sets the priority of the chunks to generate based on a custom function.
