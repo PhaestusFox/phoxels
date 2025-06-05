@@ -401,6 +401,7 @@ pub fn make_mesh<T: Block>(data: ChunkData<T>) -> (Mesh, Aabb) {
         checked.insert(UVec3::new(x, y, z), current);
         indices.extend(m_block.indices.iter().map(|i| positions.len() as u32 + i));
         positions.extend(m_block.vertexs.iter().map(|p| {
+            let n = p.0.to_normal_encoding() as u32;
             let p = p.0.to_pos(p.1, p.2, p.3);
             let x = p[0] + x;
             let y = p[1] + y;
@@ -409,7 +410,8 @@ pub fn make_mesh<T: Block>(data: ChunkData<T>) -> (Mesh, Aabb) {
             positions_old.push([x as f32, y as f32, z as f32]);
             x | y << CHUNK_SIZE.bits_per_axis()
                 | z << (CHUNK_SIZE.bits_per_axis() * 2)
-                | id << (8 + (CHUNK_SIZE.bits_per_axis() * 2))
+                | id << (CHUNK_SIZE.bits_per_axis() * 3)
+                | n << ((CHUNK_SIZE.bits_per_axis() * 3) + 8) // n is the normal encoding
             // 9 bits left
         }));
     }
@@ -585,6 +587,19 @@ impl Vertex {
             Vertex::RightBottomBack => [x_run as u32, 0, z_run as u32],
             Vertex::LeftBottomBack => [0, 0, z_run as u32],
             Vertex::RightBottomFront => [x_run as u32, 0, 0],
+        }
+    }
+
+    fn to_normal_encoding(self) -> u8 {
+        match self {
+            Vertex::LeftBottomBack => 0b000,
+            Vertex::RightBottomBack => 0b100,
+            Vertex::RightTopBack => 0b110,
+            Vertex::LeftTopBack => 0b010,
+            Vertex::LeftBottomFront => 0b001,
+            Vertex::RightBottomFront => 0b101,
+            Vertex::RightTopFront => 0b111,
+            Vertex::LeftTopFront => 0b011,
         }
     }
 }

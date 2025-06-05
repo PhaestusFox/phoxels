@@ -169,7 +169,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     let x = vertex.position & 31;
     let y = (vertex.position >> 5) & 31;
     let z = (vertex.position >> 10) & 31;
-    out.block_type = (vertex.position >> 18) & 255;
+    out.block_type = (vertex.position >> 15) & 255;
     let pos = vec3(f32(x), f32(y), f32(z));
 
 
