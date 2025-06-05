@@ -54,7 +54,7 @@ const TOP_FACE: [Vertex; 4] = [
     Vertex::LeftTopFront,  // left top front
 ];
 
-pub fn make_mesh<T: Block>(data: ChunkData<T>) -> (Mesh, Aabb) {
+pub fn make_mesh<T: Block>(data: ChunkData<T>) -> Option<(Mesh, Aabb)> {
     let mut mesh = Mesh::new(
         bevy::render::mesh::PrimitiveTopology::TriangleList,
         RenderAssetUsages::RENDER_WORLD,
@@ -415,11 +415,14 @@ pub fn make_mesh<T: Block>(data: ChunkData<T>) -> (Mesh, Aabb) {
             // 9 bits left
         }));
     }
+    if positions.is_empty() {
+        return None; // No blocks to render
+    }
     mesh.insert_attribute(crate::simple_shader::BLOCK_DATA, positions);
     #[cfg(feature = "standerd_position")]
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions_old);
     mesh.insert_indices(bevy::render::mesh::Indices::U32(indices));
-    (mesh, Aabb::from_min_max(min.as_vec3(), max.as_vec3()))
+    Some((mesh, Aabb::from_min_max(min.as_vec3(), max.as_vec3())))
 }
 
 #[derive(Default)]

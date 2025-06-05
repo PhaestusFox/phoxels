@@ -58,8 +58,8 @@ impl<T: Block> ChunkGenerator<T> {
 #[derive(Resource, Default)]
 pub struct ChunkMesher {
     to_generate: IndexSet<Entity>,
-    generating: HashMap<Entity, Task<(Mesh, Aabb)>>,
-    old_generating: HashMap<Entity, Task<(Mesh, Aabb)>>,
+    generating: HashMap<Entity, Task<Option<(Mesh, Aabb)>>>,
+    old_generating: HashMap<Entity, Task<Option<(Mesh, Aabb)>>>,
 }
 
 impl ChunkMesher {
@@ -552,7 +552,9 @@ pub(super) fn start_generating_chunk_mesh<T: Block>(
         };
         #[cfg(target_arch = "wasm32")]
         {
-            let (mesh, aabb) = crate::chunk::mesh_gen::make_mesh(chunk_data.clone());
+            let Some((mesh, aabb)) = crate::chunk::mesh_gen::make_mesh(chunk_data.clone()) else {
+                return;
+            };
             commands
                 .entity(chunk_id)
                 .insert((Mesh3d(assets.add(mesh)), aabb));
@@ -615,7 +617,9 @@ pub(super) fn extract_finished_chunk_mesh(
         #[cfg(feature = "log")]
         bevy::log::trace!("Chunk {:?} has finished meshing inserting mesh", entity);
 
-        let (mesh, aabb) = bevy::tasks::block_on(task);
+        let Some((mesh, aabb)) = bevy::tasks::block_on(task) else {
+            return;
+        };
         commands
             .entity(entity)
             .insert((Mesh3d(mesh_assets.add(mesh)), aabb));

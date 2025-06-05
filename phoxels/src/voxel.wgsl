@@ -195,10 +195,5 @@ fn vertex(vertex: Vertex) -> VertexOutput {
     out.position = position_world_to_clip(out.world_position.xyz);
     /// end set pos
 
-#ifdef VISIBILITY_RANGE_DITHER
-    out.visibility_range_dither = mesh_functions::get_visibility_range_dither_level(
-        vertex.instance_index, mesh_world_from_local[3]);
-#endif
-
     return out;
 }

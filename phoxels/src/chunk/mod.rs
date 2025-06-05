@@ -169,7 +169,7 @@ impl<T: Block> ChunkData<T> {
     }
 
     #[inline(always)]
-    pub(crate) async fn generate_mesh(self) -> (Mesh, Aabb) {
+    pub(crate) async fn generate_mesh(self) -> Option<(Mesh, Aabb)> {
         mesh_gen::make_mesh(self)
     }
 
