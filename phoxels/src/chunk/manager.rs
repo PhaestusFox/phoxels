@@ -640,5 +640,9 @@ impl<T: Block> PhoxelGenerate<T> {
         world
             .resource_mut::<ChunkGenerator<T>>()
             .add_to_queue(ctx.entity);
+        world
+            .commands()
+            .entity(ctx.entity)
+            .remove::<PhoxelGenerate<T>>();
     }
 }

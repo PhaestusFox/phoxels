@@ -416,6 +416,8 @@ pub fn make_mesh<T: Block>(data: ChunkData<T>) -> Option<(Mesh, Aabb)> {
         }));
     }
     if positions.is_empty() {
+        #[cfg(feature = "log")]
+        bevy::log::warn!("No blocks to render in chunk");
         return None; // No blocks to render
     }
     mesh.insert_attribute(crate::simple_shader::BLOCK_DATA, positions);
