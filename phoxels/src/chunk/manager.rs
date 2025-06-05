@@ -553,7 +553,7 @@ pub(super) fn start_generating_chunk_mesh<T: Block>(
         #[cfg(target_arch = "wasm32")]
         {
             let Some((mesh, aabb)) = crate::chunk::mesh_gen::make_mesh(chunk_data.clone()) else {
-                return;
+                continue;
             };
             commands
                 .entity(chunk_id)
@@ -618,7 +618,7 @@ pub(super) fn extract_finished_chunk_mesh(
         bevy::log::trace!("Chunk {:?} has finished meshing inserting mesh", entity);
 
         let Some((mesh, aabb)) = bevy::tasks::block_on(task) else {
-            return;
+            continue;
         };
         commands
             .entity(entity)
